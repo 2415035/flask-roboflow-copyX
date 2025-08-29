@@ -74,5 +74,4 @@ def process():
 from flask_ngrok import run_with_ngrok
 
 if __name__ == "__main__":
-    run_with_ngrok(app)  # ← esto inicia Flask + Ngrok en Colab
-    app.run()
+    app.run(port=5003)
