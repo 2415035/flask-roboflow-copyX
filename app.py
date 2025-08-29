@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 import tempfile
-
+from flask_ngrok import run_with_ngrok
 
 app = Flask(__name__)
 import base64
@@ -70,8 +70,12 @@ def process():
         "image": img_base64,
         "json": result
     })
-    
-from flask_ngrok import run_with_ngrok
 
-if __name__ == "__main__":
-    app.run(port=5003)
+
+#if __name__ == "__main__":
+#    app.run(port=5003)
+
+if __name__ == '__main__':
+    from flask_ngrok import run_with_ngrok
+    run_with_ngrok(app)
+    app.run()
