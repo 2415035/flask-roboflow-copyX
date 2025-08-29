@@ -72,5 +72,5 @@ def process():
     })
     
 if __name__ == "__main__":
-    run_with_ngrok(app)  # abre un túnel público ngrok
+    run_with_ngrok(app)  # abre túnel público
     app.run()
