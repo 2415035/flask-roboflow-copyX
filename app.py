@@ -21,7 +21,7 @@ def process():
 
     CLIENT = InferenceHTTPClient(
         api_url="https://serverless.roboflow.com",
-        api_key="xxxx" # <<<< Cambiar
+        api_key="jBVSfkwNV6KBQ29SYJ5H" # <<<< Cambiar
     )
 
     # Get image from the request
@@ -34,7 +34,7 @@ def process():
     with tempfile.NamedTemporaryFile(delete=True) as tmp:
         tmp.write(image_bytes)
         tmp.flush()
-        result = CLIENT.infer(tmp.name, model_id="rock-paper-scissors-sxsw/14") # <<<< Cambiar
+        result = CLIENT.infer(tmp.name, model_id="pineapple-xooc7-5fxts/1") # <<<< Cambiar
 
     # Cargar la imagen original
     img = Image.open(io.BytesIO(image_bytes))
