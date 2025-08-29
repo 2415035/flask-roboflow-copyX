@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 import tempfile
+from flask_ngrok import run_with_ngrok
 
 app = Flask(__name__)
 import base64
@@ -71,4 +72,5 @@ def process():
     })
     
 if __name__ == "__main__":
-    app.run(debug=True)
+    run_with_ngrok(app)  # abre un túnel público ngrok
+    app.run()
