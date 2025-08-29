@@ -74,5 +74,4 @@ def process():
 from flask_ngrok import run_with_ngrok
 
 if __name__ == "__main__":
-    #run_with_ngrok(app)  # ✅ Abre el túnel ngrok automáticamente
-    app.run()
+    app.run(port=5000)
