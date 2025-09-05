@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/json.css') }}" />
+    <style>
+        .card {
+            margin-top: 20px;
+        }
+
+        #imagePreview {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <h1 class="mt-4 mb-4 text-center">Panel de verificacion</h1>
+
+        <div class="d-flex flex-row gap-2">
+            <div style="width: 20%">
+                <div class="card w-100" id="card-upload-image">
+                    <div class="card-header">
+                        Cargar imagen
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="imageFile" class="form-label">Seleccione un mango:</label>
+                                <input class="form-control" type="file" id="imageFile" name="imageFile"
+                                    accept="image/*">
+                            </div>
+                            <div class="py-4">
+                                <img id="imagePreview" src="#" alt="Image Preview" style="display: none; width: 100%">
+                                <p id="noPreviewText">No image selected yet.</p>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Subir</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div style="width: 20%">
+                <div class="card w-100">
+                    <div class="card-header">
+                        Analisis
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="d-flex flex-column gap-2 align-items-center">
+                            <div class="spinner-border" role="status" id="spinner-analisis" style="display: none;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div id="card-result-analisis" style="display: none;">
+                                <img id="imageProcessed" src="#" alt="Image Preview" class="img-fluid"
+                                    style="display: none;">
+                                <div class="pt-4">
+                                    <button type="button" data-bs-toggle="modal" data-bs-target="#json-data-modal"
+                                        class="btn btn-secondary">Ver detalles</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card w-100">
+                    <div class="card-header">
+                        Acciones
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="switchCheckChecked"
+                                checked>
+                            <label class="form-check-label" for="switchCheckChecked"> Contar automatico</label>
+                        </div>
+                        <hr>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="switchCheckChecked"
+                                checked>
+                            <label class="form-check-label" for="switchCheckChecked"> Alertar cuando</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="width: 20%">
+                <div class="card w-100">
+                    <div class="card-header">
+                        Resultados
+                    </div>
+                    <div class="card-body">
+                        <div>
+                            <h3>
+                                <span id="qtyValidText">0</span> mangos validos
+                            </h3>
+                        </div>
+                        <hr>
+                        <div>
+                            <h3>
+                                <span id="qtyInvalidText">0</span> mangos invalidos
+                            </h3>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" tabindex="-1" id="json-data-modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalles del análisis</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <pre class="json-stringify text-start" id="processedText">{Datos JSON}</pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://malsup.github.io/jquery.blockUI.js"></script>
+    <script>
+        var qtyValid = 0;
+        var qtyInvalid = 0;
+        function syntaxHighlight(json) {
+            if (typeof json !== 'string') {
+                json = JSON.stringify(json, undefined, 2);
+            }
+            json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        cls = 'string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return `<span class="json-${cls}">${match}</span>`;
+            });
+        }
+
+        $(document).ready(function () {
+            $('#imageFile').change(function () {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        $('#imagePreview').attr('src', e.target.result).show();
+                        $('#noPreviewText').hide();
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    $('#imagePreview').attr('src', '').hide();
+                    $('#noPreviewText').show();
+                }
+            });
+
+            $('#uploadForm').submit(function (event) {
+                event.preventDefault();
+
+                $('#card-upload-image').block({ message: "Cargando..." });
+                $('#spinner-analisis').show();
+                $('#card-result-analisis').hide();
+
+                var formData = new FormData(this);
+
+                $.ajax({
+                    url: '/process', // Replace with your Flask upload route
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (response) {
+                        $('#card-upload-image').unblock();
+                        $('#spinner-analisis').hide();
+                        $('#card-result-analisis').show();
+                        // You can handle the response from the server here
+                        $('#imageProcessed').attr('src', 'data:image/png;base64,' + response.image).show();
+                        document.getElementById('processedText').innerHTML = syntaxHighlight(response.json);
+
+                        counts(response.json);
+
+                    },
+                    error: function (error) {
+                        alert('Error uploading image.');
+                        console.error(error);
+                    }
+                });
+            });
+
+            function counts(json) {
+                for (var i = 0; i < json.predictions.length; i++) {
+                    qtyValid++;
+                }
+                $('#qtyValidText').text(qtyValid);
+            }
+        });
+    </script>
+</body>
+
+</html>
