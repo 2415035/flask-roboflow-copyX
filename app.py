@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 from flask import Flask, render_template, request, jsonify
 import tempfile
-from flask_ngrok import run_with_ngrok
 
 app = Flask(__name__)
 import base64
@@ -13,6 +12,10 @@ import base64
 @app.route("/")
 def home():
     return render_template('upload.html', title='Equisd')
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template('dashboard.html', title='Equisd')
 
 @app.route("/process", methods=['POST'])
 def process():
@@ -70,10 +73,6 @@ def process():
         "image": img_base64,
         "json": result
     })
-
-
-#if __name__ == "__main__":
-#    app.run(port=5003)
-
+    
 if __name__ == "__main__":
-    app.run(port=5000)
+    app.run(debug=True)
