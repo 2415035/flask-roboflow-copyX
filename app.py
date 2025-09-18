@@ -1,6 +1,6 @@
 import io
 from PIL import Image
-from inference_sdk import InferenceHTTPClient
+from roboflow import Roboflow
 import cv2
 import numpy as np
 from flask import Flask, render_template, request, jsonify
@@ -37,7 +37,11 @@ def process():
     with tempfile.NamedTemporaryFile(delete=True) as tmp:
         tmp.write(image_bytes)
         tmp.flush()
-        result = CLIENT.infer(tmp.name, model_id="pineapple-xooc7-5fxts/1") # <<<< Cambiar
+
+        rf = Roboflow(api_key="jBVSfkwNV6KBQ29SYJ5H")
+        project = rf.workspace().project("pineapple-xooc7-5fxts")
+        model = project.version(1).model
+        result = model.predict(tmp.name).json()
 
     # Cargar la imagen original
     img = Image.open(io.BytesIO(image_bytes))
