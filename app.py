@@ -22,11 +22,6 @@ def process():
     # include code to process the image using sdk inference of roboflow
 
 
-    CLIENT = InferenceHTTPClient(
-        api_url="https://serverless.roboflow.com",
-        api_key="jBVSfkwNV6KBQ29SYJ5H" # <<<< Cambiar
-    )
-
     # Get image from the request
     if 'imageFile' not in request.files:
         return "No image provided", 400
