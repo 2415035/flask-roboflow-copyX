@@ -54,7 +54,7 @@ ifaddr==0.2.0
 imageio==2.37.0
 importlib_metadata==8.7.0
 importlib_resources==6.5.2
-inference-sdk==0.52.1
+inference-sdk
 iniconfig==2.1.0
 isodate==0.7.2
 itsdangerous==2.2.0
