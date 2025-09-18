@@ -80,6 +80,7 @@ nvidia-ml-py==12.575.51
 onnxruntime==1.19.2
 onvif-zeep-async==2.0.0
 openai==1.99.9
+opencv-python-headless==4.10.0.84
 packaging==24.2
 paho-mqtt==1.6.1
 pandas==2.3.1
