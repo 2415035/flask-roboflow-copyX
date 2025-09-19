@@ -8,8 +8,43 @@
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <!-- Tu CSS externo -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <!-- Fondo + estilos -->
+  <style>
+    body {
+      background: url("https://images.unsplash.com/photo-1606788075761-3fdb5966e9df") no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .card {
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.9); /* efecto vidrio */
+      backdrop-filter: blur(10px);
+      box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    }
+
+    .json-stringify { 
+      white-space: pre-wrap; 
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; 
+      font-size: .9rem; 
+    }
+    .json-key { color: #1d4ed8; }
+    .json-string { color: #059669; }
+    .json-number { color: #b45309; }
+    .json-boolean { color: #dc2626; }
+    .json-null { color: #6b7280; }
+
+    .thumb { 
+      width: 56px; 
+      height: 56px; 
+      object-fit: cover; 
+      border-radius: 8px; 
+    }
+    .sticky { 
+      position: sticky; 
+      top: 1rem; 
+    }
+  </style>
 
   <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- evita 404 de favicon -->
 </head>
@@ -171,7 +206,8 @@
   <script src="https://unpkg.com/@instantdb/core@latest/dist/standalone/index.umd.cjs"></script>
 
   <!-- Tu JS -->
-  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  <script>
+    /* Tu mismo JS de análisis aquí (igual que lo tenías antes) */
+  </script>
 </body>
 </html>
-
