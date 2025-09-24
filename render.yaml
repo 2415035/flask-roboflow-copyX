@@ -2,6 +2,8 @@ services:
   - type: web
     name: flask-roboflow-copyX
     env: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
+
 
