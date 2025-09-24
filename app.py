@@ -10,7 +10,7 @@ app = Flask(__name__)
 # === InstantDB credentials ===
 INSTANTDB_API_URL = "https://app.instantdb.io/api/project/proyecto-productivo/predictions"
 HEADERS = {
-    "X-INSTANT-API-KEY": "TU_API_KEY_AQUÍ"
+    "X-INSTANT-API-KEY": "646b5cf0-25ff-4084-9ed9-505666a1bb1a"
 }
 
 @app.route("/")
