@@ -5,10 +5,14 @@ import plotly.graph_objs as go
 
 app = Flask(__name__)
 
-# === Configuración de InstantDB ===
-INSTANTDB_API_URL = "https://instantdb.io/api/project/proyecto-productivo/predictions"
+# === Configuración de SUPABASE ===
+SUPABASE_URL = "https://ipgfsxnaohvsnnoxhdbv.supabase.co"
+SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZ2ZzeG5hb2h2c25ub3hoZGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Mzc4OTQsImV4cCI6MjA3NDMxMzg5NH0.Ia_CdNAiu5HKPsjc_J5e5Xu1Zoh-bwrBtnpvHP9-D_w"
+SUPABASE_TABLE = "predictions"
+
 HEADERS = {
-    "X-INSTANT-API-KEY": "646b5cf0-25ff-4084-9ed9-505666a1bb1a"
+    "apikey": SUPABASE_API_KEY,
+    "Authorization": f"Bearer {SUPABASE_API_KEY}"
 }
 
 @app.route("/")
@@ -18,13 +22,14 @@ def home():
 @app.route("/dashboard")
 def dashboard():
     try:
-        response = requests.get(INSTANTDB_API_URL, headers=HEADERS)
+        url = f"{SUPABASE_URL}/rest/v1/{SUPABASE_TABLE}?select=*"
+        response = requests.get(url, headers=HEADERS)
         data = response.json()
 
-        if "data" not in data:
-            return "Error: No se encontraron datos en la respuesta de InstantDB."
+        if not data:
+            return "No hay datos disponibles desde Supabase."
 
-        df = pd.DataFrame(data["data"])
+        df = pd.DataFrame(data)
 
         if df.empty:
             return "No hay datos para mostrar."
@@ -37,10 +42,12 @@ def dashboard():
         if "claseValidada" not in df.columns:
             return "Error: No se encontró la columna 'claseValidada'."
         
+        # Gráfico de torta
         pie_data = df["claseValidada"].value_counts().reset_index()
         pie_chart = go.Figure(data=[go.Pie(labels=pie_data['index'], values=pie_data['claseValidada'])])
         pie_html = pie_chart.to_html(full_html=False)
 
+        # Gráfico de barras
         bar_data = df.groupby("fecha").size().reset_index(name="total")
         bar_chart = go.Figure(data=[go.Bar(x=bar_data["fecha"], y=bar_data["total"])])
         bar_html = bar_chart.to_html(full_html=False)
