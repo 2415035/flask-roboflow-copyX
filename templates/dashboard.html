@@ -199,34 +199,6 @@
       new bootstrap.Toast(toastEl, { delay: 2200 }).show();
     }
 
-    function syntaxHighlight(json) {
-      if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
-      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-        function (match) {
-          let cls = 'number';
-          if (/^"/.test(match)) cls = /:$/.test(match) ? 'key' : 'string';
-          else if (/true|false/.test(match)) cls = 'boolean';
-          else if (/null/.test(match)) cls = 'null';
-          return `<span class="json-${cls}">${match}</span>`;
-        });
-    }
-
-    function updateFileInfo(file){
-      if (!file) { $('#fileInfo').text(''); return; }
-      const kb = (file.size/1024).toFixed(1);
-      $('#fileInfo').text(`${file.name} • ${kb} KB`);
-    }
-
-    function addToHistory(src){
-      const ul = document.getElementById('history');
-      const li = document.createElement('li');
-      li.className = 'd-flex align-items-center justify-content-between py-1';
-      li.innerHTML = `<img src="${src}" class="thumb me-2" alt="thumb"><span class="text-truncate">Procesado</span>`;
-      ul.prepend(li);
-      while (ul.children.length > 6) ul.removeChild(ul.lastChild);
-    }
-
     async function initDB() {
       globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
     }
@@ -234,7 +206,6 @@
     function counts(json) {
       const validClass = document.getElementById('validClass').value;
       const threshold = parseFloat(document.getElementById('threshold').value);
-
       let valid = 0, invalid = 0;
       if (json && Array.isArray(json.predictions)) {
         for (const p of json.predictions) {
@@ -244,10 +215,8 @@
           else invalid++;
         }
       }
-
       document.getElementById('qtyValidText').textContent = valid;
       document.getElementById('qtyInvalidText').textContent = invalid;
-
       if (document.getElementById('alertSwitch').checked && invalid > 0) {
         showToast(`Alerta: ${invalid} inválidos detectados`, false);
       }
@@ -274,13 +243,7 @@
             backgroundColor: ['#22c55e', '#ef4444']
           }]
         },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'bottom' },
-            title: { display: true, text: 'Resumen de predicciones' }
-          }
-        }
+        options: { responsive: true }
       });
     }
 
@@ -308,16 +271,7 @@
             backgroundColor: ['#22c55e','#ef4444','#f59e0b','#3b82f6']
           }]
         },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            title: { display: true, text: 'Distribución por clase validada' }
-          },
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
+        options: { responsive: true }
       });
     }
 
@@ -329,19 +283,6 @@
 
       const $th = $('#threshold'), $thVal = $('#thVal');
       $th.on('input', () => $thVal.text(parseFloat($th.val()).toFixed(2)));
-
-      $('#imageFile').change(function () {
-        const file = this.files[0];
-        updateFileInfo(file);
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = e => { $('#imagePreview').attr('src', e.target.result).show(); $('#noPreviewText').hide(); };
-          reader.readAsDataURL(file);
-        } else {
-          $('#imagePreview').attr('src','').hide();
-          $('#noPreviewText').show();
-        }
-      });
 
       $('#uploadForm').submit(function (event) {
         event.preventDefault();
@@ -365,9 +306,8 @@
             $('#imageProcessed').attr('src', dataUrl).show();
             $('#btnDownload').attr('href', dataUrl);
             lastImageDataUrl = dataUrl;
-            addToHistory(dataUrl);
 
-            document.getElementById('processedText').innerHTML = syntaxHighlight(response.json);
+            document.getElementById('processedText').innerHTML = JSON.stringify(response.json, null, 2);
 
             if ($('#autoCount').is(':checked')) {
               try {
@@ -402,11 +342,6 @@
             console.error(error);
           }
         });
-      });
-
-      $('#btnCopyJson').on('click', () => {
-        const text = document.getElementById('processedText').innerText;
-        navigator.clipboard.writeText(text).then(() => showToast('JSON copiado 📋', true));
       });
     });
   </script>
