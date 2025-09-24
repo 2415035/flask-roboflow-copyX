@@ -7,7 +7,7 @@
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/json.css') }}" />
 
   <style>
     body { background: #f7f8fb; }
@@ -21,7 +21,7 @@
     <h1 class="mb-4 text-center">Panel de verificación</h1>
 
     <div class="row g-3">
-      <!-- Col: Cargar -->
+      <!-- Columna: Cargar -->
       <div class="col-12 col-lg-3">
         <div class="card sticky" id="card-upload-image">
           <div class="card-header">Cargar imagen</div>
@@ -32,12 +32,10 @@
                 <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/*" required>
                 <div class="form-text" id="fileInfo"></div>
               </div>
-
               <div class="py-3 text-center">
                 <img id="imagePreview" src="#" alt="Vista previa" class="img-fluid rounded" style="display:none;"/>
                 <p id="noPreviewText" class="text-secondary">Aún no hay imagen seleccionada.</p>
               </div>
-
               <div class="row g-2">
                 <div class="col-12">
                   <label class="form-label mb-1">Clase válida</label>
@@ -53,14 +51,12 @@
                   <input type="range" class="form-range" min="0" max="1" step="0.01" value="0.50" id="threshold">
                 </div>
               </div>
-
               <div class="d-grid mt-3">
                 <button type="submit" class="btn btn-primary">Procesar</button>
               </div>
             </form>
           </div>
         </div>
-
         <!-- Historial -->
         <div class="card mt-3 sticky">
           <div class="card-header">Historial reciente</div>
@@ -70,7 +66,7 @@
         </div>
       </div>
 
-      <!-- Col: Análisis -->
+      <!-- Columna: Análisis -->
       <div class="col-12 col-lg-5">
         <div class="card h-100">
           <div class="card-header d-flex align-items-center justify-content-between">
@@ -81,36 +77,43 @@
             </div>
           </div>
           <div class="card-body text-center">
-            <div id="spinner-analisis" class="spinner-border" role="status" style="display:none;">
-              <span class="visually-hidden">Cargando...</span>
-            </div>
-
-            <div id="card-result-analisis" style="display:none;">
-              <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
-              <div class="pt-3 d-flex gap-2 justify-content-center">
-                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
-                <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
+            <div class="d-flex flex-column gap-3 align-items-center">
+              <div class="spinner-border" role="status" id="spinner-analisis" style="display:none;">
+                <span class="visually-hidden">Cargando...</span>
               </div>
-            </div>
-
-            <div class="row g-2 mt-3">
-              <div class="col-6">
-                <div class="alert alert-success py-2 m-0">
-                  <strong id="qtyValidText">0</strong> válidos
+              <div id="card-result-analisis" style="display:none;">
+                <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
+                <div class="pt-3 d-flex gap-2 justify-content-center">
+                  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
+                  <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
                 </div>
               </div>
-              <div class="col-6">
-                <div class="alert alert-danger py-2 m-0">
-                  <strong id="qtyInvalidText">0</strong> inválidos
+              <div class="text-start w-100">
+                <div class="row g-2">
+                  <div class="col-6">
+                    <div class="alert alert-success py-2 m-0">
+                      <strong id="qtyValidText">0</strong> válidos
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="alert alert-danger py-2 m-0">
+                      <strong id="qtyInvalidText">0</strong> inválidos
+                    </div>
+                  </div>
                 </div>
               </div>
+              <div class="text-start w-100">
+                <small class="text-muted">*Válido = clase seleccionada + confianza ≥ umbral.</small>
+              </div>
             </div>
-            <small class="text-muted">*Válido = clase seleccionada + confianza ≥ umbral.</small>
+            <!-- 🎯 Gráfico debajo del análisis -->
+            <hr>
+            <canvas id="barChart" height="200"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- Col: Acciones + Gráficos -->
+      <!-- Columna: Acciones -->
       <div class="col-12 col-lg-4">
         <div class="card h-100">
           <div class="card-header">Acciones</div>
@@ -121,25 +124,8 @@
             </div>
             <hr>
             <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
-            <hr>
-            <h6>Resumen InstantDB</h6>
-            <canvas id="chartClasses" style="max-height:200px;"></canvas>
-            <canvas id="chartValids" style="max-height:200px;" class="mt-3"></canvas>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- JSON Modal -->
-  <div class="modal fade" id="json-data-modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Detalles del análisis (JSON)</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body"><pre id="processedText">{}</pre></div>
       </div>
     </div>
   </div>
@@ -147,128 +133,63 @@
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-  <script src="https://malsup.github.io/jquery.blockUI.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/@instantdb/core@latest/dist/standalone/index.umd.cjs"></script>
 
   <script>
-    let lastImageDataUrl = null;
+    let chartInstance = null;
     const { init, id } = window.instant;
     let globalDB = null;
-    let chartClassesInstance = null;
-    let chartValidsInstance = null;
 
     async function initDB() {
       globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
-      renderCharts();
+      renderChart();
     }
 
-    async function renderCharts() {
+    async function renderChart() {
       if (!globalDB) return;
       const registros = await globalDB.query(globalDB.q.predictions.all());
-
-      // Conteo por clase
-      let counts = { ripen: 0, unripen: 0, mango: 0, pineapple: 0 };
-      let totalValid = 0, totalInvalid = 0;
+      const labels = [];
+      const validos = [];
+      const invalidos = [];
 
       registros.forEach(r => {
-        if (r.claseValidada && counts[r.claseValidada] !== undefined) {
-          counts[r.claseValidada]++;
-        }
-        totalValid += r.validos ?? 0;
-        totalInvalid += r.invalidos ?? 0;
+        labels.push(new Date(r.fecha).toLocaleDateString());
+        validos.push(r.validos);
+        invalidos.push(r.invalidos);
       });
 
-      // Bar chart
-      const ctx1 = document.getElementById('chartClasses').getContext('2d');
-      if (chartClassesInstance) chartClassesInstance.destroy();
-      chartClassesInstance = new Chart(ctx1, {
+      const ctx = document.getElementById('barChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
         type: 'bar',
-        data: { labels: Object.keys(counts), datasets: [{ data: Object.values(counts), backgroundColor: ['#22c55e','#ef4444','#f59e0b','#3b82f6'] }] },
-        options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
-      });
-
-      // Doughnut chart
-      const ctx2 = document.getElementById('chartValids').getContext('2d');
-      if (chartValidsInstance) chartValidsInstance.destroy();
-      chartValidsInstance = new Chart(ctx2, {
-        type: 'doughnut',
-        data: { labels: ['Válidos','Inválidos'], datasets: [{ data: [totalValid,totalInvalid], backgroundColor:['#22c55e','#ef4444'] }] },
-        options: { responsive:true }
+        data: {
+          labels,
+          datasets: [
+            { label: 'Válidos', data: validos, backgroundColor: '#22c55e' },
+            { label: 'Inválidos', data: invalidos, backgroundColor: '#ef4444' }
+          ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
       });
     }
 
-    // Historial
-    function addToHistory(src){
-      const ul = document.getElementById('history');
-      const li = document.createElement('li');
-      li.className = 'd-flex align-items-center justify-content-between py-1';
-      li.innerHTML = `<img src="${src}" class="thumb me-2"><span class="text-truncate">Procesado</span>`;
-      ul.prepend(li);
-      while (ul.children.length > 6) ul.removeChild(ul.lastChild);
+    async function savePredictionToDB(response) {
+      if (!globalDB) return;
+      await globalDB.transact(globalDB.tx.predictions[id()].create({
+        fecha: new Date().toISOString(),
+        claseValidada: document.getElementById('validClass').value,
+        umbral: parseFloat(document.getElementById('threshold').value),
+        validos: parseInt(document.getElementById('qtyValidText').textContent),
+        invalidos: parseInt(document.getElementById('qtyInvalidText').textContent),
+        imagen: response.image,
+        predicciones: response.json.predictions
+      }));
+      renderChart();
     }
 
-    function counts(json) {
-      const validClass = document.getElementById('validClass').value;
-      const threshold = parseFloat(document.getElementById('threshold').value);
-      let valid=0, invalid=0;
-      if (json && Array.isArray(json.predictions)) {
-        for (const p of json.predictions) {
-          const cls = p.class ?? p.label ?? p.name;
-          const conf = p.confidence ?? p.score ?? 0;
-          if (cls===validClass && conf>=threshold) valid++; else invalid++;
-        }
-      }
-      document.getElementById('qtyValidText').textContent = valid;
-      document.getElementById('qtyInvalidText').textContent = invalid;
-      if (document.getElementById('alertSwitch').checked && invalid>0) alert(`⚠️ ${invalid} inválidos detectados`);
-    }
-
-    // Procesar imagen
-    $('#uploadForm').submit(function (event) {
-      event.preventDefault();
-      $('#card-upload-image').block({ message: "Cargando..." });
-      $('#spinner-analisis').show();
-      $('#card-result-analisis').hide();
-      const formData = new FormData(this);
-      $.ajax({
-        url: '/process',
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: async function (response) {
-          $('#card-upload-image').unblock();
-          $('#spinner-analisis').hide();
-          $('#card-result-analisis').show();
-          const dataUrl = 'data:image/png;base64,' + response.image;
-          $('#imageProcessed').attr('src', dataUrl).show();
-          $('#btnDownload').attr('href', dataUrl);
-          lastImageDataUrl = dataUrl;
-          addToHistory(dataUrl);
-          document.getElementById('processedText').textContent = JSON.stringify(response.json,null,2);
-          counts(response.json);
-          $('#lastMsg').text('Análisis completado.');
-
-          if (globalDB) {
-            await globalDB.transact(globalDB.tx.predictions[id()].create({
-              fecha: new Date().toISOString(),
-              claseValidada: document.getElementById('validClass').value,
-              umbral: parseFloat(document.getElementById('threshold').value),
-              validos: parseInt(document.getElementById('qtyValidText').textContent),
-              invalidos: parseInt(document.getElementById('qtyInvalidText').textContent),
-              imagen: lastImageDataUrl,
-              predicciones: response.json.predictions
-            }));
-            renderCharts();
-          }
-        }
-      });
-    });
-
-    $(document).ready(function () {
-      initDB();
-      $('#threshold').on('input', function () { $('#thVal').text(parseFloat($(this).val()).toFixed(2)); });
-    });
+    $(document).ready(() => initDB());
   </script>
 </body>
 </html>
