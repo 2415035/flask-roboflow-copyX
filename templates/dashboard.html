@@ -6,19 +6,12 @@
   <title>Panel de verificación</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- evita 404 de favicon -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js -->
 
-  <!-- CSS propio -->
   <style>
     body { background: #f7f8fb; }
     .card { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.05); }
-    .json-stringify { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; }
-    .json-key { color: #1d4ed8; }
-    .json-string { color: #059669; }
-    .json-number { color: #b45309; }
-    .json-boolean { color: #dc2626; }
-    .json-null { color: #6b7280; }
     .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
     .sticky { position: sticky; top: 1rem; }
   </style>
@@ -72,9 +65,7 @@
         <div class="card mt-3 sticky">
           <div class="card-header">Historial reciente</div>
           <div class="card-body">
-            <ul id="history" class="list-unstyled mb-0 small">
-              <!-- items dinámicos -->
-            </ul>
+            <ul id="history" class="list-unstyled mb-0 small"></ul>
           </div>
         </div>
       </div>
@@ -90,45 +81,36 @@
             </div>
           </div>
           <div class="card-body text-center">
-            <div class="d-flex flex-column gap-3 align-items-center">
-              <div class="spinner-border" role="status" id="spinner-analisis" style="display:none;">
-                <span class="visually-hidden">Cargando...</span>
-              </div>
+            <div id="spinner-analisis" class="spinner-border" role="status" style="display:none;">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
 
-              <div id="card-result-analisis" style="display:none;">
-                <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
-                <div class="pt-3 d-flex gap-2 justify-content-center">
-                  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
-                  <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
-                </div>
-              </div>
-
-              <div class="text-start w-100">
-                <div class="row g-2">
-                  <div class="col-6">
-                    <div class="alert alert-success py-2 m-0">
-                      <strong id="qtyValidText">0</strong> válidos
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="alert alert-danger py-2 m-0">
-                      <strong id="qtyInvalidText">0</strong> inválidos
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="text-start w-100">
-                <small class="text-muted">
-                  *Válido = clase seleccionada + confianza ≥ umbral.
-                </small>
+            <div id="card-result-analisis" style="display:none;">
+              <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
+              <div class="pt-3 d-flex gap-2 justify-content-center">
+                <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
+                <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
               </div>
             </div>
+
+            <div class="row g-2 mt-3">
+              <div class="col-6">
+                <div class="alert alert-success py-2 m-0">
+                  <strong id="qtyValidText">0</strong> válidos
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="alert alert-danger py-2 m-0">
+                  <strong id="qtyInvalidText">0</strong> inválidos
+                </div>
+              </div>
+            </div>
+            <small class="text-muted">*Válido = clase seleccionada + confianza ≥ umbral.</small>
           </div>
         </div>
       </div>
 
-      <!-- Col: Resultados/Acciones + Gráfico -->
+      <!-- Col: Acciones + Gráficos -->
       <div class="col-12 col-lg-4">
         <div class="card h-100">
           <div class="card-header">Acciones</div>
@@ -139,42 +121,30 @@
             </div>
             <hr>
             <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
-            <canvas id="chartClasses" class="mt-3"></canvas>
+            <hr>
+            <h6>Resumen InstantDB</h6>
+            <canvas id="chartClasses" style="max-height:200px;"></canvas>
+            <canvas id="chartValids" style="max-height:200px;" class="mt-3"></canvas>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal JSON -->
+  <!-- JSON Modal -->
   <div class="modal fade" id="json-data-modal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Detalles del análisis (JSON)</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body">
-          <pre class="json-stringify text-start" id="processedText">{}</pre>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline-secondary" id="btnCopyJson">Copiar JSON</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-        </div>
+        <div class="modal-body"><pre id="processedText">{}</pre></div>
       </div>
     </div>
   </div>
 
-  <!-- Toasts -->
-  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
-    <div id="toast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body" id="toastBody">Mensaje</div>
-        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
-      </div>
-    </div>
-  </div>
-
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://malsup.github.io/jquery.blockUI.js"></script>
@@ -185,44 +155,46 @@
     const { init, id } = window.instant;
     let globalDB = null;
     let chartClassesInstance = null;
+    let chartValidsInstance = null;
 
     async function initDB() {
       globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
-      console.log("✅ InstantDB inicializado");
+      renderCharts();
     }
 
-    // Renderizar gráfico
-    async function renderClassChart() {
+    async function renderCharts() {
       if (!globalDB) return;
-      try {
-        const registros = await globalDB.query(globalDB.q.predictions.all());
-        let counts = { ripen: 0, unripen: 0, mango: 0, pineapple: 0 };
-        registros.forEach(r => {
-          if (r.claseValidada && counts[r.claseValidada] !== undefined) {
-            counts[r.claseValidada]++;
-          }
-        });
-        const ctx = document.getElementById('chartClasses').getContext('2d');
-        if (chartClassesInstance) chartClassesInstance.destroy();
-        chartClassesInstance = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: Object.keys(counts),
-            datasets: [{
-              label: 'Cantidad de imágenes procesadas',
-              data: Object.values(counts),
-              backgroundColor: ['#22c55e','#ef4444','#f59e0b','#3b82f6']
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-          }
-        });
-      } catch (err) {
-        console.error("⚠️ Error al consultar InstantDB:", err);
-      }
+      const registros = await globalDB.query(globalDB.q.predictions.all());
+
+      // Conteo por clase
+      let counts = { ripen: 0, unripen: 0, mango: 0, pineapple: 0 };
+      let totalValid = 0, totalInvalid = 0;
+
+      registros.forEach(r => {
+        if (r.claseValidada && counts[r.claseValidada] !== undefined) {
+          counts[r.claseValidada]++;
+        }
+        totalValid += r.validos ?? 0;
+        totalInvalid += r.invalidos ?? 0;
+      });
+
+      // Bar chart
+      const ctx1 = document.getElementById('chartClasses').getContext('2d');
+      if (chartClassesInstance) chartClassesInstance.destroy();
+      chartClassesInstance = new Chart(ctx1, {
+        type: 'bar',
+        data: { labels: Object.keys(counts), datasets: [{ data: Object.values(counts), backgroundColor: ['#22c55e','#ef4444','#f59e0b','#3b82f6'] }] },
+        options: { responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+      });
+
+      // Doughnut chart
+      const ctx2 = document.getElementById('chartValids').getContext('2d');
+      if (chartValidsInstance) chartValidsInstance.destroy();
+      chartValidsInstance = new Chart(ctx2, {
+        type: 'doughnut',
+        data: { labels: ['Válidos','Inválidos'], datasets: [{ data: [totalValid,totalInvalid], backgroundColor:['#22c55e','#ef4444'] }] },
+        options: { responsive:true }
+      });
     }
 
     // Historial
@@ -230,33 +202,29 @@
       const ul = document.getElementById('history');
       const li = document.createElement('li');
       li.className = 'd-flex align-items-center justify-content-between py-1';
-      li.innerHTML = `<img src="${src}" class="thumb me-2" alt="thumb"><span class="text-truncate">Procesado</span>`;
+      li.innerHTML = `<img src="${src}" class="thumb me-2"><span class="text-truncate">Procesado</span>`;
       ul.prepend(li);
       while (ul.children.length > 6) ul.removeChild(ul.lastChild);
     }
 
-    // Contar válidos / inválidos
     function counts(json) {
       const validClass = document.getElementById('validClass').value;
       const threshold = parseFloat(document.getElementById('threshold').value);
-      let valid = 0, invalid = 0;
+      let valid=0, invalid=0;
       if (json && Array.isArray(json.predictions)) {
         for (const p of json.predictions) {
           const cls = p.class ?? p.label ?? p.name;
-          const conf = p.confidence ?? p.score ?? p.conf ?? 0;
-          if (cls === validClass && conf >= threshold) valid++;
-          else invalid++;
+          const conf = p.confidence ?? p.score ?? 0;
+          if (cls===validClass && conf>=threshold) valid++; else invalid++;
         }
       }
       document.getElementById('qtyValidText').textContent = valid;
       document.getElementById('qtyInvalidText').textContent = invalid;
-      if (document.getElementById('alertSwitch').checked && invalid > 0) {
-        showToast(`Alerta: ${invalid} inválidos detectados`, false);
-      }
+      if (document.getElementById('alertSwitch').checked && invalid>0) alert(`⚠️ ${invalid} inválidos detectados`);
     }
 
-    // Enviar formulario
-    $('#uploadForm').submit(async function (event) {
+    // Procesar imagen
+    $('#uploadForm').submit(function (event) {
       event.preventDefault();
       $('#card-upload-image').block({ message: "Cargando..." });
       $('#spinner-analisis').show();
@@ -277,8 +245,10 @@
           $('#btnDownload').attr('href', dataUrl);
           lastImageDataUrl = dataUrl;
           addToHistory(dataUrl);
+          document.getElementById('processedText').textContent = JSON.stringify(response.json,null,2);
           counts(response.json);
           $('#lastMsg').text('Análisis completado.');
+
           if (globalDB) {
             await globalDB.transact(globalDB.tx.predictions[id()].create({
               fecha: new Date().toISOString(),
@@ -289,37 +259,16 @@
               imagen: lastImageDataUrl,
               predicciones: response.json.predictions
             }));
+            renderCharts();
           }
-          await renderClassChart();
-        },
-        error: function (error) {
-          $('#card-upload-image').unblock();
-          $('#spinner-analisis').hide();
-          $('#lastMsg').text('Ocurrió un error al procesar.');
-          console.error(error);
         }
       });
     });
 
-    // Inicializar
     $(document).ready(function () {
-      initDB().then(() => {
-        renderClassChart();
-      });
-      $('#threshold').on('input', function () {
-        $('#thVal').text(parseFloat($(this).val()).toFixed(2));
-      });
+      initDB();
+      $('#threshold').on('input', function () { $('#thVal').text(parseFloat($(this).val()).toFixed(2)); });
     });
-
-    // Toast
-    function showToast(msg, ok=true){
-      const toastEl = document.getElementById('toast');
-      const body = document.getElementById('toastBody');
-      body.textContent = msg;
-      toastEl.classList.toggle('text-bg-success', ok);
-      toastEl.classList.toggle('text-bg-danger', !ok);
-      new bootstrap.Toast(toastEl, { delay: 2200 }).show();
-    }
   </script>
 </body>
 </html>
