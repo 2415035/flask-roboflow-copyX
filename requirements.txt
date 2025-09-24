@@ -1,9 +1,9 @@
 numpy<2.0
 opencv-python-headless==4.9.0.80
-roboflow
-supabase
+supabase-py
 flask
 gunicorn
 plotly
 pandas
 requests
+
