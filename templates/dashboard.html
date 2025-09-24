@@ -4,240 +4,207 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Panel de verificación</title>
-
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <style>
     body { background: #f7f8fb; }
     .card { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.05); }
+    .json-stringify { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; }
+    .json-key { color: #1d4ed8; }
+    .json-string { color: #059669; }
+    .json-number { color: #b45309; }
+    .json-boolean { color: #dc2626; }
+    .json-null { color: #6b7280; }
     .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
     .sticky { position: sticky; top: 1rem; }
   </style>
 </head>
 <body>
-  <div class="container-fluid py-4">
-    <h1 class="mb-4 text-center">Panel de verificación</h1>
-
-    <div class="row g-3">
-      <!-- Columna izquierda -->
-      <div class="col-12 col-lg-3">
-        <div class="card sticky" id="card-upload-image">
-          <div class="card-header">Cargar imagen</div>
-          <div class="card-body">
-            <form id="uploadForm" enctype="multipart/form-data">
-              <div class="mb-3">
-                <label for="imageFile" class="form-label">Seleccione una imagen:</label>
-                <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/*" required>
-                <div class="form-text" id="fileInfo"></div>
-              </div>
-              <div class="py-3 text-center">
-                <img id="imagePreview" src="#" alt="Vista previa" class="img-fluid rounded" style="display:none;"/>
-                <p id="noPreviewText" class="text-secondary">Aún no hay imagen seleccionada.</p>
-              </div>
-              <div class="row g-2">
-                <div class="col-12">
-                  <label class="form-label mb-1">Clase válida</label>
-                  <select id="validClass" class="form-select">
-                    <option value="ripen" selected>ripen</option>
-                    <option value="unripen">unripen</option>
-                  </select>
-                </div>
-                <div class="col-12">
-                  <label for="threshold" class="form-label">Umbral: <span id="thVal">0.50</span></label>
-                  <input type="range" class="form-range" min="0" max="1" step="0.01" value="0.50" id="threshold">
-                </div>
-              </div>
-              <div class="d-grid mt-3">
-                <button type="submit" class="btn btn-primary">Procesar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-        <!-- Historial -->
-        <div class="card mt-3 sticky">
-          <div class="card-header">Historial reciente</div>
-          <div class="card-body">
-            <ul id="history" class="list-unstyled mb-0 small"></ul>
-          </div>
+<div class="container-fluid py-4">
+  <h1 class="mb-4 text-center">Panel de verificación</h1>
+  <div class="row g-3">
+    <div class="col-12 col-lg-3">
+      <div class="card sticky">
+        <div class="card-header">Cargar imagen</div>
+        <div class="card-body">
+          <form id="uploadForm" enctype="multipart/form-data">
+            <input class="form-control mb-3" type="file" id="imageFile" name="imageFile" accept="image/*" required>
+            <select id="validClass" class="form-select mb-2">
+              <option value="ripen" selected>ripen</option>
+              <option value="unripen">unripen</option>
+              <option value="mango">mango</option>
+              <option value="pineapple">pineapple</option>
+            </select>
+            <input type="range" class="form-range" min="0" max="1" step="0.01" value="0.5" id="threshold">
+            <div class="text-center py-2">
+              <img id="imagePreview" src="#" alt="Vista previa" style="display:none; max-width:100%;"/>
+              <p id="noPreviewText" class="text-muted">Aún no hay imagen seleccionada.</p>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary">Procesar</button>
+            </div>
+          </form>
         </div>
       </div>
-
-      <!-- Columna central -->
-      <div class="col-12 col-lg-5">
-        <div class="card h-100">
-          <div class="card-header d-flex align-items-center justify-content-between">
-            <span>Análisis</span>
-            <div class="form-check form-switch m-0">
-              <input class="form-check-input" type="checkbox" id="autoCount" checked>
-              <label class="form-check-label" for="autoCount">Contar automático</label>
-            </div>
-          </div>
-          <div class="card-body text-center">
-            <div class="d-flex flex-column gap-3 align-items-center">
-              <div class="spinner-border" role="status" id="spinner-analisis" style="display:none;">
-                <span class="visually-hidden">Cargando...</span>
-              </div>
-              <div id="card-result-analisis" style="display:none;">
-                <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
-                <div class="pt-3 d-flex gap-2 justify-content-center">
-                  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
-                  <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
-                </div>
-              </div>
-              <div class="text-start w-100">
-                <div class="row g-2">
-                  <div class="col-6"><div class="alert alert-success py-2 m-0"><strong id="qtyValidText">0</strong> válidos</div></div>
-                  <div class="col-6"><div class="alert alert-danger py-2 m-0"><strong id="qtyInvalidText">0</strong> inválidos</div></div>
-                </div>
-              </div>
-            </div>
-            <!-- 🎯 Gráfico debajo -->
-            <hr>
-            <canvas id="barChart" height="200"></canvas>
-          </div>
+      <div class="card mt-3 sticky">
+        <div class="card-header">Historial reciente</div>
+        <div class="card-body">
+          <ul id="history" class="list-unstyled mb-0 small"></ul>
         </div>
       </div>
-
-      <!-- Columna derecha -->
-      <div class="col-12 col-lg-4">
-        <div class="card h-100">
-          <div class="card-header">Acciones</div>
-          <div class="card-body">
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="alertSwitch">
-              <label class="form-check-label" for="alertSwitch">Alertar si inválidos &gt; 0</label>
-            </div>
-            <hr>
-            <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
+    </div>
+    <div class="col-12 col-lg-5">
+      <div class="card h-100">
+        <div class="card-header">Análisis</div>
+        <div class="card-body text-center">
+          <div class="alert alert-success">Válidos: <strong id="qtyValidText">0</strong></div>
+          <div class="alert alert-danger">Inválidos: <strong id="qtyInvalidText">0</strong></div>
+          <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
+          <a id="btnDownload" class="btn btn-outline-primary mt-2" download="procesado.png">Descargar</a>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4">
+      <div class="card h-100">
+        <div class="card-header">Acciones</div>
+        <div class="card-body">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="alertSwitch">
+            <label class="form-check-label" for="alertSwitch">Alertar si inválidos &gt; 0</label>
           </div>
+          <div class="mt-3" id="lastMsg">Listo para procesar.</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://unpkg.com/@instantdb/core@latest/dist/standalone/index.umd.cjs"></script>
+  <!-- GRAFICO FUERA DEL CUADRO PRINCIPAL -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Gráfico de Predicciones desde InstantDB</span>
+          <small class="text-muted" id="statusGrafico">📊 Cargando datos...</small>
+        </div>
+        <div class="card-body">
+          <canvas id="barChart" height="100"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-  <script>
-    let chartInstance = null;
-    const { init, id } = window.instant;
-    let globalDB = null;
+<!-- LIBRERIAS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://unpkg.com/@instantdb/core@latest/dist/standalone/index.umd.cjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    // Iniciar DB
-    async function initDB() {
-      globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
-      renderChart();
+<script>
+  const { init, id } = window.instant;
+  let globalDB = null;
+  let lastImageDataUrl = null;
+
+  async function initDB() {
+    globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
+    renderChart();
+  }
+
+  function showToast(msg, ok=true){ console.log(msg); }
+  function updateCounts(json) {
+    const validClass = document.getElementById('validClass').value;
+    const threshold = parseFloat(document.getElementById('threshold').value);
+    let valid = 0, invalid = 0;
+    if (json && Array.isArray(json.predictions)) {
+      for (const p of json.predictions) {
+        const cls = p.class ?? p.label ?? p.name;
+        const conf = p.confidence ?? p.score ?? 0;
+        if (cls === validClass && conf >= threshold) valid++; else invalid++;
+      }
     }
+    document.getElementById('qtyValidText').textContent = valid;
+    document.getElementById('qtyInvalidText').textContent = invalid;
+    if (document.getElementById('alertSwitch').checked && invalid > 0) {
+      alert(`⚠️ Se detectaron ${invalid} inválidos`);
+    }
+  }
 
-    // Renderizar gráfico
-    async function renderChart() {
-      if (!globalDB) return;
-      const registros = await globalDB.query(globalDB.q.predictions.all());
-      const labels = [];
-      const validos = [];
-      const invalidos = [];
+  async function renderChart() {
+    if (!globalDB) return;
+    const registros = await globalDB.query(globalDB.q.predictions.all());
+    document.getElementById('statusGrafico').textContent = `✅ ${registros.length} registros cargados`;
+    const clases = {};
+    registros.forEach(r => {
+      const c = r.claseValidada || 'otro';
+      if (!clases[c]) clases[c] = { validos: 0, invalidos: 0 };
+      clases[c].validos += r.validos;
+      clases[c].invalidos += r.invalidos;
+    });
+    const labels = Object.keys(clases);
+    const validos = labels.map(c => clases[c].validos);
+    const invalidos = labels.map(c => clases[c].invalidos);
+    const ctx = document.getElementById('barChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Válidos', data: validos, backgroundColor: 'rgba(34,197,94,0.8)' },
+          { label: 'Inválidos', data: invalidos, backgroundColor: 'rgba(239,68,68,0.8)' }
+        ]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Conteo por clase' } } }
+    });
+  }
 
-      registros.forEach(r => {
-        labels.push(new Date(r.fecha).toLocaleTimeString());
-        validos.push(r.validos);
-        invalidos.push(r.invalidos);
-      });
+  $(document).ready(function () {
+    initDB();
+    $('#imageFile').change(function () {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          $('#imagePreview').attr('src', e.target.result).show();
+          $('#noPreviewText').hide();
+        };
+        reader.readAsDataURL(file);
+      }
+    });
 
-      const ctx = document.getElementById('barChart').getContext('2d');
-      if (chartInstance) chartInstance.destroy();
-
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label: 'Válidos', data: validos, backgroundColor: '#22c55e' },
-            { label: 'Inválidos', data: invalidos, backgroundColor: '#ef4444' }
-          ]
+    $('#uploadForm').submit(function (e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      $.ajax({
+        url: '/process',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function (response) {
+          const dataUrl = 'data:image/png;base64,' + response.image;
+          $('#imageProcessed').attr('src', dataUrl).show();
+          $('#btnDownload').attr('href', dataUrl);
+          lastImageDataUrl = dataUrl;
+          updateCounts(response.json);
+          $('#lastMsg').text('✔ Procesado con éxito');
+          if (globalDB) {
+            globalDB.transact(globalDB.tx.predictions[id()].create({
+              fecha: new Date().toISOString(),
+              claseValidada: document.getElementById('validClass').value,
+              umbral: parseFloat(document.getElementById('threshold').value),
+              validos: parseInt(document.getElementById('qtyValidText').textContent),
+              invalidos: parseInt(document.getElementById('qtyInvalidText').textContent),
+              imagen: lastImageDataUrl,
+              predicciones: response.json.predictions
+            })).then(() => renderChart());
+          }
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
-      });
-    }
-
-    // Guardar y actualizar gráfico
-    async function savePredictionToDB(response, valid, invalid) {
-      if (!globalDB) return;
-      await globalDB.transact(globalDB.tx.predictions[id()].create({
-        fecha: new Date().toISOString(),
-        claseValidada: document.getElementById('validClass').value,
-        umbral: parseFloat(document.getElementById('threshold').value),
-        validos: valid,
-        invalidos: invalid,
-        imagen: response.image,
-        predicciones: response.json.predictions
-      }));
-      renderChart();
-    }
-
-    // Evento principal
-    $(document).ready(function () {
-      initDB();
-
-      $('#threshold').on('input', function () {
-        $('#thVal').text(parseFloat(this.value).toFixed(2));
-      });
-
-      $('#imageFile').change(function () {
-        const file = this.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = e => { $('#imagePreview').attr('src', e.target.result).show(); $('#noPreviewText').hide(); };
-          reader.readAsDataURL(file);
+        error: function () {
+          $('#lastMsg').text('❌ Error al procesar.');
         }
       });
-
-      $('#uploadForm').submit(function (event) {
-        event.preventDefault();
-        const formData = new FormData(this);
-
-        $.ajax({
-          url: '/process',
-          type: 'POST',
-          data: formData,
-          processData: false,
-          contentType: false,
-          success: function (response) {
-            const dataUrl = 'data:image/png;base64,' + response.image;
-            $('#imageProcessed').attr('src', dataUrl).show();
-            $('#btnDownload').attr('href', dataUrl);
-
-            // Calcular válidos e inválidos
-            let valid = 0, invalid = 0;
-            const validClass = $('#validClass').val();
-            const threshold = parseFloat($('#threshold').val());
-
-            if (response.json && Array.isArray(response.json.predictions)) {
-              response.json.predictions.forEach(p => {
-                const cls = p.class ?? p.label;
-                const conf = p.confidence ?? 0;
-                if (cls === validClass && conf >= threshold) valid++;
-                else invalid++;
-              });
-            }
-
-            $('#qtyValidText').text(valid);
-            $('#qtyInvalidText').text(invalid);
-
-            // Guardar y actualizar gráfico
-            savePredictionToDB(response, valid, invalid);
-
-            $('#lastMsg').text('Análisis completado.');
-          },
-          error: function (err) {
-            console.error(err);
-            $('#lastMsg').text('Error al procesar.');
-          }
-        });
-      });
     });
-  </script>
+  });
+</script>
 </body>
 </html>
