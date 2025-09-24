@@ -6,7 +6,7 @@ import plotly.graph_objs as go
 app = Flask(__name__)
 
 # === Configuración de InstantDB ===
-INSTANTDB_API_URL = "https://app.instantdb.io/api/project/proyecto-productivo/predictions"
+INSTANTDB_API_URL = "https://instantdb.io/api/project/proyecto-productivo/predictions"
 HEADERS = {
     "X-INSTANT-API-KEY": "646b5cf0-25ff-4084-9ed9-505666a1bb1a"
 }
