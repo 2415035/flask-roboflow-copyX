@@ -21,7 +21,7 @@
   <div class="container py-4">
     <h1 class="text-center mb-4">Panel de verificación</h1>
 
-    <!-- Contador -->
+    <!-- Cargar imagen y mostrar resultado -->
     <div class="row g-3 mb-3">
       <div class="col-md-4">
         <div class="card">
@@ -61,14 +61,13 @@
       </div>
     </div>
 
-    <!-- Historial y gráfico -->
+    <!-- Historial gráfico -->
     <div class="card">
       <div class="card-header">Historial completo de análisis</div>
       <div class="card-body">
         <div id="barChart" style="height:400px;"></div>
       </div>
     </div>
-  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -80,7 +79,33 @@
 
     async function initDB() {
       globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
-      await renderBarChart();
+      await updateAllCharts();
+    }
+
+    async function updateAllCharts() {
+      if (!globalDB) return;
+      const registros = await globalDB.query(globalDB.q.predictions.all());
+      if (!registros.length) return;
+
+      const fechas = registros.map(r => new Date(r.fecha).toLocaleString());
+      const validos = registros.map(r => r.validos);
+      const invalidos = registros.map(r => r.invalidos);
+
+      // Pie Chart acumulado
+      const totalValid = validos.reduce((a,b)=>a+b,0);
+      const totalInvalid = invalidos.reduce((a,b)=>a+b,0);
+      renderPieChart(totalValid, totalInvalid);
+
+      // Bar Chart
+      Plotly.newPlot('barChart', [
+        { x: fechas, y: validos, name: 'Válidos', type: 'bar', marker: { color: '#22c55e' } },
+        { x: fechas, y: invalidos, name: 'Inválidos', type: 'bar', marker: { color: '#ef4444' } }
+      ], {
+        barmode: 'group',
+        title: 'Historial de análisis',
+        xaxis: { title: 'Fecha' },
+        yaxis: { title: 'Cantidad' }
+      });
     }
 
     function renderPieChart(valid, invalid) {
@@ -93,46 +118,6 @@
         title: 'Último análisis',
         margin: { t: 30, b: 20, l: 20, r: 20 }
       }, { displayModeBar: false });
-    }
-
-    async function renderBarChart() {
-      if (!globalDB) return;
-      const registros = await globalDB.query(globalDB.q.predictions.all());
-      if (!registros.length) return;
-
-      const fechas = registros.map(r => new Date(r.fecha).toLocaleString());
-      const validos = registros.map(r => r.validos);
-      const invalidos = registros.map(r => r.invalidos);
-
-      Plotly.newPlot('barChart', [
-        { x: fechas, y: validos, name: 'Válidos', type: 'bar', marker: { color: '#22c55e' } },
-        { x: fechas, y: invalidos, name: 'Inválidos', type: 'bar', marker: { color: '#ef4444' } }
-      ], {
-        barmode: 'group',
-        title: 'Historial de análisis',
-        xaxis: { title: 'Fecha' },
-        yaxis: { title: 'Cantidad' }
-      });
-    }
-
-    function counts(json) {
-      const validClass = document.getElementById('validClass').value;
-      const threshold = parseFloat(document.getElementById('threshold').value);
-      let valid = 0, invalid = 0;
-
-      if (json && Array.isArray(json.predictions)) {
-        for (const p of json.predictions) {
-          const cls = p.class ?? p.label ?? p.name;
-          const conf = p.confidence ?? p.score ?? p.conf ?? 0;
-          if (cls === validClass && conf >= threshold) valid++;
-          else invalid++;
-        }
-      }
-
-      document.getElementById('qtyValidText').textContent = valid;
-      document.getElementById('qtyInvalidText').textContent = invalid;
-      renderPieChart(valid, invalid);
-      return { valid, invalid };
     }
 
     $(document).ready(function () {
@@ -159,19 +144,34 @@
             const imgUrl = 'data:image/png;base64,' + response.image;
             $('#imageProcessed').attr('src', imgUrl).show();
 
-            const { valid, invalid } = counts(response.json);
+            const validClass = document.getElementById('validClass').value;
+            const threshold = parseFloat(document.getElementById('threshold').value);
+            let valid = 0, invalid = 0;
 
+            if (response.json && Array.isArray(response.json.predictions)) {
+              for (const p of response.json.predictions) {
+                const cls = p.class ?? p.label ?? p.name;
+                const conf = p.confidence ?? p.score ?? p.conf ?? 0;
+                if (cls === validClass && conf >= threshold) valid++;
+                else invalid++;
+              }
+            }
+
+            document.getElementById('qtyValidText').textContent = valid;
+            document.getElementById('qtyInvalidText').textContent = invalid;
+
+            // Guardar en InstantDB y actualizar gráficos acumulados
             if (globalDB) {
               await globalDB.transact(globalDB.tx.predictions[id()].create({
                 fecha: new Date().toISOString(),
-                claseValidada: document.getElementById('validClass').value,
-                umbral: parseFloat(document.getElementById('threshold').value),
+                claseValidada: validClass,
+                umbral: threshold,
                 validos: valid,
                 invalidos: invalid,
                 imagen: imgUrl,
                 predicciones: response.json.predictions
               }));
-              renderBarChart();
+              await updateAllCharts();
             }
           },
           error: function (err) {
