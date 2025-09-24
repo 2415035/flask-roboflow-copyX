@@ -29,18 +29,22 @@
     <h1 class="mb-4 text-center">Panel de verificación</h1>
 
     <div class="row g-3">
-      <!-- Secciones previas OMITIDAS para brevedad -->
-
-      <!-- NUEVO Panel de Gráficos -->
+      <!-- Panel de Gráficos -->
       <div class="col-12">
         <div class="card mt-3">
-          <div class="card-header">Resumen del análisis actual</div>
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Resumen del análisis actual</span>
+            <button class="btn btn-sm btn-outline-secondary" onclick="renderPieChart(5, 3)">Demo torta</button>
+          </div>
           <div class="card-body">
             <div id="pieChart" style="height:300px;"></div>
           </div>
         </div>
         <div class="card mt-3">
-          <div class="card-header">Historial completo de análisis</div>
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Historial completo de análisis</span>
+            <button class="btn btn-sm btn-outline-secondary" onclick="renderBarChart(true)">Demo barras</button>
+          </div>
           <div class="card-body">
             <div id="barChart" style="height:400px;"></div>
           </div>
@@ -60,7 +64,7 @@
 
     async function initDB() {
       globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
-      renderBarChart();
+      await renderBarChart();
     }
 
     function renderPieChart(valid, invalid) {
@@ -75,9 +79,23 @@
       }, { displayModeBar: false });
     }
 
-    async function renderBarChart() {
-      if (!globalDB) return;
-      const registros = await globalDB.query(globalDB.q.predictions.all());
+    async function renderBarChart(useDemo = false) {
+      if (!globalDB && !useDemo) return;
+      let registros = [];
+      if (useDemo) {
+        registros = [
+          { fecha: new Date(), validos: 3, invalidos: 2 },
+          { fecha: new Date(), validos: 6, invalidos: 1 },
+          { fecha: new Date(), validos: 4, invalidos: 3 }
+        ];
+      } else {
+        registros = await globalDB.query(globalDB.q.predictions.all());
+        if (registros.length === 0) {
+          console.warn("No hay registros en InstantDB. Usa el botón de demo para probar.");
+          return;
+        }
+      }
+
       const fechas = registros.map(r => new Date(r.fecha).toLocaleString());
       const validos = registros.map(r => r.validos);
       const invalidos = registros.map(r => r.invalidos);
@@ -98,8 +116,8 @@
     }
 
     function counts(json) {
-      const validClass = document.getElementById('validClass').value;
-      const threshold = parseFloat(document.getElementById('threshold').value);
+      const validClass = document.getElementById('validClass')?.value || 'ripen';
+      const threshold = parseFloat(document.getElementById('threshold')?.value || 0.5);
       let valid = 0, invalid = 0;
 
       if (json && Array.isArray(json.predictions)) {
@@ -120,4 +138,5 @@
     window.addEventListener('DOMContentLoaded', initDB);
   </script>
 </body>
+
 </html>
