@@ -5,49 +5,54 @@
   <title>Panel de verificación</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+  <!-- Plotly CDN para gráficos -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
+  <!-- Estilos para el dashboard -->
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f4f6f9;
-      margin: 20px;
+      background-color: #f4f6f9;
+      margin: 0;
       padding: 0;
     }
 
     h1 {
       text-align: center;
       color: #333;
+      margin-top: 30px;
     }
 
     .chart-container {
       width: 90%;
       max-width: 900px;
       margin: 30px auto;
-      background: white;
-      border-radius: 10px;
+      background-color: #ffffff;
+      border-radius: 12px;
       padding: 20px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
 
     .chart-container h3 {
-      margin-top: 0;
       text-align: center;
+      margin-bottom: 15px;
       color: #444;
     }
   </style>
 </head>
 <body>
+
   <h1>Panel de verificación</h1>
 
   <div class="chart-container">
     <h3>Gráfico acumulado por clase (torta)</h3>
-    {{ pie_html | safe }}
+    {{ pie_html|safe }}
   </div>
 
   <div class="chart-container">
     <h3>Historial de análisis por fecha (barras)</h3>
-    {{ bar_html | safe }}
+    {{ bar_html|safe }}
   </div>
+
 </body>
 </html>
