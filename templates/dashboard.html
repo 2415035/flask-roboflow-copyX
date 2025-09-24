@@ -6,9 +6,8 @@
   <title>Panel de verificación</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- evita 404 de favicon -->
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
 
-  <!-- CSS propio -->
   <style>
     body { background: #f7f8fb; }
     .card { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.05); }
@@ -137,8 +136,11 @@
             <hr>
             <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
 
-            <!-- Gráfico -->
+            <!-- Gráfico circular -->
             <canvas id="chartValids" height="200"></canvas>
+            <hr>
+            <!-- Gráfico de barras -->
+            <canvas id="chartClasses" height="200"></canvas>
           </div>
         </div>
       </div>
@@ -186,6 +188,7 @@
     const { init, id } = window.instant;
     let globalDB = null;
     let chartInstance = null;
+    let chartClassesInstance = null;
 
     function showToast(msg, ok=true){
       const toastEl = document.getElementById('toast');
@@ -281,8 +284,49 @@
       });
     }
 
+    async function renderClassChart() {
+      if (!globalDB) return;
+      const registros = await globalDB.query(globalDB.q.predictions.all());
+
+      let counts = { ripen: 0, unripen: 0, mango: 0, pineapple: 0 };
+      registros.forEach(r => {
+        if (r.claseValidada && counts[r.claseValidada] !== undefined) {
+          counts[r.claseValidada] += 1;
+        }
+      });
+
+      const ctx = document.getElementById('chartClasses').getContext('2d');
+      if (chartClassesInstance) chartClassesInstance.destroy();
+
+      chartClassesInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(counts),
+          datasets: [{
+            label: 'Cantidad de imágenes procesadas',
+            data: Object.values(counts),
+            backgroundColor: ['#22c55e','#ef4444','#f59e0b','#3b82f6']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: 'Distribución por clase validada' }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
     $(document).ready(function () {
-      initDB();
+      initDB().then(() => {
+        renderChart();
+        renderClassChart();
+      });
+
       const $th = $('#threshold'), $thVal = $('#thVal');
       $th.on('input', () => $thVal.text(parseFloat($th.val()).toFixed(2)));
 
@@ -346,7 +390,9 @@
                 predicciones: response.json.predictions
               }));
             }
+
             renderChart();
+            renderClassChart();
           },
           error: function (error) {
             $('#card-upload-image').unblock();
