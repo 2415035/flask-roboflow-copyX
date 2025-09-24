@@ -6,21 +6,14 @@
   <title>Panel de verificación</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- evita 404 de favicon -->
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
 
   <!-- CSS propio -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/json.css') }}" />
   <style>
     body { background: #f7f8fb; }
     .card { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.05); }
-    .json-stringify { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; }
-    .json-key { color: #1d4ed8; }
-    .json-string { color: #059669; }
-    .json-number { color: #b45309; }
-    .json-boolean { color: #dc2626; }
-    .json-null { color: #6b7280; }
     .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
-    .sticky { position: sticky; top: 1rem; }
   </style>
 </head>
 <body>
@@ -28,326 +21,119 @@
     <h1 class="mb-4 text-center">Panel de verificación</h1>
 
     <div class="row g-3">
-      <!-- Col: Cargar -->
+      <!-- Columna izquierda -->
       <div class="col-12 col-lg-3">
         <div class="card sticky" id="card-upload-image">
-          <div class="card-header">Cargar imagen</div>
+          <div class="card-header">Registrar predicción</div>
           <div class="card-body">
-            <form id="uploadForm" enctype="multipart/form-data">
+            <form id="predictionForm">
               <div class="mb-3">
-                <label for="imageFile" class="form-label">Seleccione una imagen:</label>
-                <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/*" required>
-                <div class="form-text" id="fileInfo"></div>
+                <label class="form-label">Archivo</label>
+                <input type="text" id="filename" class="form-control" placeholder="ej: imagen1.jpg" required>
               </div>
-
-              <div class="py-3 text-center">
-                <img id="imagePreview" src="#" alt="Vista previa" class="img-fluid rounded" style="display:none;"/>
-                <p id="noPreviewText" class="text-secondary">Aún no hay imagen seleccionada.</p>
+              <div class="mb-3">
+                <label class="form-label">Etiqueta</label>
+                <select id="label" class="form-select">
+                  <option value="Palta">Palta</option>
+                  <option value="Mandarina">Mandarina</option>
+                  <option value="Otro">Otro</option>
+                </select>
               </div>
-
-              <div class="row g-2">
-                <div class="col-12">
-                  <label class="form-label mb-1">Clase válida</label>
-                  <!-- Ajusta las opciones según tus clases reales -->
-                  <select id="validClass" class="form-select">
-                    <option value="ripen" selected>ripen</option>
-                    <option value="unripen">unripen</option>
-                    <option value="mango">mango</option>
-                    <option value="pineapple">pineapple</option>
-                  </select>
-                </div>
-                <div class="col-12">
-                  <label for="threshold" class="form-label">Umbral de confianza: <span id="thVal">0.50</span></label>
-                  <input type="range" class="form-range" min="0" max="1" step="0.01" value="0.50" id="threshold">
-                </div>
+              <div class="mb-3">
+                <label class="form-label">Confianza</label>
+                <input type="number" step="0.01" id="confidence" class="form-control" value="0.90" required>
               </div>
-
-              <div class="d-grid mt-3">
-                <button type="submit" class="btn btn-primary">Procesar</button>
-              </div>
+              <button type="submit" class="btn btn-primary w-100">Guardar en Supabase</button>
             </form>
           </div>
         </div>
-
-        <!-- Historial -->
-        <div class="card mt-3 sticky">
-          <div class="card-header">Historial reciente</div>
-          <div class="card-body">
-            <ul id="history" class="list-unstyled mb-0 small">
-              <!-- items dinámicos -->
-            </ul>
-          </div>
-        </div>
       </div>
 
-      <!-- Col: Análisis -->
+      <!-- Columna central -->
       <div class="col-12 col-lg-5">
         <div class="card h-100">
-          <div class="card-header d-flex align-items-center justify-content-between">
-            <span>Análisis</span>
-            <div class="form-check form-switch m-0">
-              <input class="form-check-input" type="checkbox" id="autoCount" checked>
-              <label class="form-check-label" for="autoCount">Contar automático</label>
-            </div>
-          </div>
-          <div class="card-body text-center">
-            <div class="d-flex flex-column gap-3 align-items-center">
-              <div class="spinner-border" role="status" id="spinner-analisis" style="display:none;">
-                <span class="visually-hidden">Cargando...</span>
-              </div>
-
-              <div id="card-result-analisis" style="display:none;">
-                <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
-                <div class="pt-3 d-flex gap-2 justify-content-center">
-                  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
-                  <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
-                </div>
-              </div>
-
-              <div class="text-start w-100">
-                <div class="row g-2">
-                  <div class="col-6">
-                    <div class="alert alert-success py-2 m-0">
-                      <strong id="qtyValidText">0</strong> válidos
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="alert alert-danger py-2 m-0">
-                      <strong id="qtyInvalidText">0</strong> inválidos
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="text-start w-100">
-                <small class="text-muted">
-                  *Válido = clase seleccionada + confianza ≥ umbral.
-                </small>
-              </div>
-            </div>
+          <div class="card-header">Gráfico de barras</div>
+          <div class="card-body">
+            {% if graph_bar %}
+              {{ graph_bar|safe }}
+            {% else %}
+              <p class="text-muted">No hay datos aún.</p>
+            {% endif %}
           </div>
         </div>
       </div>
 
-      <!-- Col: Resultados/Acciones -->
+      <!-- Columna derecha -->
       <div class="col-12 col-lg-4">
         <div class="card h-100">
-          <div class="card-header">Acciones</div>
+          <div class="card-header">Gráfico de torta</div>
           <div class="card-body">
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="alertSwitch">
-              <label class="form-check-label" for="alertSwitch">Alertar si inválidos &gt; 0</label>
-            </div>
-            <hr>
-            <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
+            {% if graph_pie %}
+              {{ graph_pie|safe }}
+            {% else %}
+              <p class="text-muted">No hay datos aún.</p>
+            {% endif %}
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Modal JSON -->
-  <div class="modal fade" id="json-data-modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Detalles del análisis (JSON)</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-          <pre class="json-stringify text-start" id="processedText">{}</pre>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline-secondary" id="btnCopyJson">Copiar JSON</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toasts -->
-  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
-    <div id="toast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body" id="toastBody">Mensaje</div>
-        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+    <!-- Tabla de registros -->
+    <div class="card mt-4">
+      <div class="card-header">Historial de predicciones</div>
+      <div class="card-body table-responsive">
+        {% if data %}
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>Archivo</th>
+              <th>Etiqueta</th>
+              <th>Confianza</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in data %}
+            <tr>
+              <td>{{ row.filename }}</td>
+              <td>{{ row.label }}</td>
+              <td>{{ row.confidence }}</td>
+              <td>{{ row.created_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <p class="text-muted">No se han registrado predicciones todavía.</p>
+        {% endif %}
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-  <script src="https://malsup.github.io/jquery.blockUI.js"></script>
-  <script src="https://unpkg.com/@instantdb/core@latest/dist/standalone/index.umd.cjs"></script>
-
-
   <script>
-    let lastImageDataUrl = null;
-
-    function showToast(msg, ok=true){
-      const toastEl = document.getElementById('toast');
-      const body = document.getElementById('toastBody');
-      body.textContent = msg;
-      toastEl.classList.toggle('text-bg-success', ok);
-      toastEl.classList.toggle('text-bg-danger', !ok);
-      new bootstrap.Toast(toastEl, { delay: 2200 }).show();
-    }
-
-    function syntaxHighlight(json) {
-      if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
-      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-        function (match) {
-          let cls = 'number';
-          if (/^"/.test(match)) cls = /:$/.test(match) ? 'key' : 'string';
-          else if (/true|false/.test(match)) cls = 'boolean';
-          else if (/null/.test(match)) cls = 'null';
-          return `<span class="json-${cls}">${match}</span>`;
-        });
-    }
-
-    function updateFileInfo(file){
-      if (!file) { $('#fileInfo').text(''); return; }
-      const kb = (file.size/1024).toFixed(1);
-      $('#fileInfo').text(`${file.name} • ${kb} KB`);
-    }
-
-    function addToHistory(src){
-      const ul = document.getElementById('history');
-      const li = document.createElement('li');
-      li.className = 'd-flex align-items-center justify-content-between py-1';
-      li.innerHTML = `<img src="${src}" class="thumb me-2" alt="thumb"><span class="text-truncate">Procesado</span>`;
-      ul.prepend(li);
-      // Limita a 6 items
-      while (ul.children.length > 6) ul.removeChild(ul.lastChild);
-    }
-
-    const { init, id } = window.instant;
-    let globalDB = null;
-
-    async function initDB() {
-      globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' }); // puedes cambiar este ID si usas uno propio
-    }
-
-    $(document).ready(function () {
-      initDB();
-      const $th = $('#threshold'), $thVal = $('#thVal');
-      $th.on('input', () => $thVal.text(parseFloat($th.val()).toFixed(2)));
-
-      $('#imageFile').change(function () {
-        const file = this.files[0];
-        updateFileInfo(file);
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = e => { $('#imagePreview').attr('src', e.target.result).show(); $('#noPreviewText').hide(); };
-          reader.readAsDataURL(file);
-        } else {
-          $('#imagePreview').attr('src','').hide();
-          $('#noPreviewText').show();
+    $("#predictionForm").submit(function(e) {
+      e.preventDefault();
+      $.ajax({
+        url: "/predict",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+          filename: $("#filename").val(),
+          label: $("#label").val(),
+          confidence: parseFloat($("#confidence").val())
+        }),
+        success: function(resp) {
+          alert("✅ Predicción guardada en Supabase");
+          location.reload();
+        },
+        error: function(err) {
+          alert("❌ Error al guardar la predicción");
+          console.error(err);
         }
-      });
-
-      $('#uploadForm').submit(function (event) {
-        event.preventDefault();
-
-        $('#card-upload-image').block({ message: "Cargando..." });
-        $('#spinner-analisis').show();
-        $('#card-result-analisis').hide();
-
-        const formData = new FormData(this);
-
-        $.ajax({
-          url: '/process',   // <-- tu ruta Flask
-          type: 'POST',
-          data: formData,
-          processData: false,
-          contentType: false,
-          success: function (response) {
-            $('#card-upload-image').unblock();
-            $('#spinner-analisis').hide();
-            $('#card-result-analisis').show();
-
-            // Imagen procesada (base64 PNG)
-            const dataUrl = 'data:image/png;base64,' + response.image;
-            $('#imageProcessed').attr('src', dataUrl).show();
-            $('#btnDownload').attr('href', dataUrl);
-            lastImageDataUrl = dataUrl;
-            addToHistory(dataUrl);
-
-            // JSON coloreado
-            document.getElementById('processedText').innerHTML = syntaxHighlight(response.json);
-
-            // Conteo
-            if ($('#autoCount').is(':checked')) {
-              counts(response.json);
-            }
-
-            $('#lastMsg').text('Análisis completado.');
-            showToast('Procesado con éxito ✅', true);
-            // Guardar predicción en InstantDB
-            if (globalDB) {
-              globalDB.transact(globalDB.tx.predictions[id()].create({
-                fecha: new Date().toISOString(),
-                claseValidada: document.getElementById('validClass').value,
-                umbral: parseFloat(document.getElementById('threshold').value),
-                validos: parseInt(document.getElementById('qtyValidText').textContent),
-                invalidos: parseInt(document.getElementById('qtyInvalidText').textContent),
-                imagen: lastImageDataUrl,
-                predicciones: response.json.predictions
-              }));
-            }
-
-          },
-          error: function (error) {
-            $('#card-upload-image').unblock();
-            $('#spinner-analisis').hide();
-            $('#lastMsg').text('Ocurrió un error al procesar.');
-            showToast('Error al procesar ❌', false);
-            console.error(error);
-          }
-        });
-      });
-
-      // Copiar JSON
-      $('#btnCopyJson').on('click', () => {
-        const text = document.getElementById('processedText').innerText;
-        navigator.clipboard.writeText(text).then(() => showToast('JSON copiado 📋', true));
       });
     });
-
-    function counts(json) {
-      // Ajusta estas claves si tu API usa otros nombres
-      const validClass = document.getElementById('validClass').value;
-      const threshold = parseFloat(document.getElementById('threshold').value);
-
-      let valid = 0, invalid = 0;
-
-      if (json && Array.isArray(json.predictions)) {
-        for (const p of json.predictions) {
-          const cls = p.class ?? p.label ?? p.name;   // intenta varias claves
-          const conf = p.confidence ?? p.score ?? p.conf ?? 0;
-
-          if (cls === validClass && conf >= threshold) valid++;
-          else invalid++;
-        }
-      }
-
-      document.getElementById('qtyValidText').textContent = valid;
-      document.getElementById('qtyInvalidText').textContent = invalid;
-
-      // Alerta opcional
-      if (document.getElementById('alertSwitch').checked && invalid > 0) {
-        showToast(`Alerta: ${invalid} inválidos detectados`, false);
-      }
-    }
-
-    async function mostrarHistorialInstantDB() {
-      if (!globalDB) return;
-      const registros = await globalDB.query(globalDB.q.predictions.all());
-      console.log('📘 Historial en InstantDB:', registros);
-    }
-
-
   </script>
 </body>
 </html>
