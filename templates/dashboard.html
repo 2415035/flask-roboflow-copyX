@@ -2,103 +2,329 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Panel de verificación</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel de verificación</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- evita 404 de favicon -->
+
+  <!-- CSS propio -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/json.css') }}" />
   <style>
-    body { background: #f7f8fb; font-family: Arial, sans-serif; padding: 20px; }
+    body { background: #f7f8fb; }
     .card { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.05); }
-    .chart-container { margin: 30px auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .json-stringify { white-space: pre-wrap; font-family: monospace; font-size: .9rem; }
-    .json-key { color: #1d4ed8; } .json-string { color: #059669; } .json-number { color: #b45309; }
-    .json-boolean { color: #dc2626; } .json-null { color: #6b7280; }
+    .json-stringify { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; }
+    .json-key { color: #1d4ed8; }
+    .json-string { color: #059669; }
+    .json-number { color: #b45309; }
+    .json-boolean { color: #dc2626; }
+    .json-null { color: #6b7280; }
     .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+    .sticky { position: sticky; top: 1rem; }
   </style>
 </head>
 <body>
-  <div class="container-fluid">
-    <h1 class="text-center mb-4">Panel de verificación</h1>
+  <div class="container-fluid py-4">
+    <h1 class="mb-4 text-center">Panel de verificación</h1>
 
-    <!-- Contenedor de gráficos -->
-    <div class="chart-container">
-      <h3 class="text-center">Gráfico de torta (Clases Validadas)</h3>
-      <div id="pie-chart"></div>
-    </div>
+    <div class="row g-3">
+      <!-- Col: Cargar -->
+      <div class="col-12 col-lg-3">
+        <div class="card sticky" id="card-upload-image">
+          <div class="card-header">Cargar imagen</div>
+          <div class="card-body">
+            <form id="uploadForm" enctype="multipart/form-data">
+              <div class="mb-3">
+                <label for="imageFile" class="form-label">Seleccione una imagen:</label>
+                <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/*" required>
+                <div class="form-text" id="fileInfo"></div>
+              </div>
 
-    <div class="chart-container">
-      <h3 class="text-center">Gráfico de barras (Historial por fecha)</h3>
-      <div id="bar-chart"></div>
+              <div class="py-3 text-center">
+                <img id="imagePreview" src="#" alt="Vista previa" class="img-fluid rounded" style="display:none;"/>
+                <p id="noPreviewText" class="text-secondary">Aún no hay imagen seleccionada.</p>
+              </div>
+
+              <div class="row g-2">
+                <div class="col-12">
+                  <label class="form-label mb-1">Clase válida</label>
+                  <select id="validClass" class="form-select">
+                    <option value="ripen" selected>ripen</option>
+                    <option value="unripen">unripen</option>
+                    <option value="mango">mango</option>
+                    <option value="pineapple">pineapple</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label for="threshold" class="form-label">Umbral de confianza: <span id="thVal">0.50</span></label>
+                  <input type="range" class="form-range" min="0" max="1" step="0.01" value="0.50" id="threshold">
+                </div>
+              </div>
+
+              <div class="d-grid mt-3">
+                <button type="submit" class="btn btn-primary">Procesar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Historial -->
+        <div class="card mt-3 sticky">
+          <div class="card-header">Historial reciente</div>
+          <div class="card-body">
+            <ul id="history" class="list-unstyled mb-0 small"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Col: Análisis -->
+      <div class="col-12 col-lg-5">
+        <div class="card h-100">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <span>Análisis</span>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" id="autoCount" checked>
+              <label class="form-check-label" for="autoCount">Contar automático</label>
+            </div>
+          </div>
+          <div class="card-body text-center">
+            <div class="d-flex flex-column gap-3 align-items-center">
+              <div class="spinner-border" role="status" id="spinner-analisis" style="display:none;">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+
+              <div id="card-result-analisis" style="display:none;">
+                <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
+                <div class="pt-3 d-flex gap-2 justify-content-center">
+                  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
+                  <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
+                </div>
+              </div>
+
+              <div class="text-start w-100">
+                <div class="row g-2">
+                  <div class="col-6">
+                    <div class="alert alert-success py-2 m-0">
+                      <strong id="qtyValidText">0</strong> válidos
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="alert alert-danger py-2 m-0">
+                      <strong id="qtyInvalidText">0</strong> inválidos
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-start w-100">
+                <small class="text-muted">
+                  *Válido = clase seleccionada + confianza ≥ umbral.
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Col: Acciones -->
+      <div class="col-12 col-lg-4">
+        <div class="card h-100">
+          <div class="card-header">Acciones</div>
+          <div class="card-body">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="alertSwitch">
+              <label class="form-check-label" for="alertSwitch">Alertar si inválidos &gt; 0</label>
+            </div>
+            <hr>
+            <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Modal JSON -->
+  <div class="modal fade" id="json-data-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Detalles del análisis (JSON)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <pre class="json-stringify text-start" id="processedText">{}</pre>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" id="btnCopyJson">Copiar JSON</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
+    <div id="toast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="toastBody">Mensaje</div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://malsup.github.io/jquery.blockUI.js"></script>
+
   <script>
-    const supabaseUrl = 'https://ipgfsxnaohvsnnoxhdbv.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZ2ZzeG5hb2h2c25ub3hoZGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTYyNjYzNDAsImV4cCI6MjAxMTg0MjM0MH0.e_SdDYZ6yKi6J_BrCtpP1lBBd7V2bBDRoFgbw1hHE50';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    let lastImageDataUrl = null;
 
-    async function cargarGraficos() {
-      const { data, error } = await supabase
-        .from('predictions')
-        .select('fecha, clasevalidada, validos, invalidos');
-
-      if (error || !data || data.length === 0) {
-        document.getElementById("pie-chart").innerHTML = "<p class='text-center text-danger'>No hay datos disponibles desde Supabase.</p>";
-        document.getElementById("bar-chart").innerHTML = "";
-        return;
-      }
-
-      // ----- Torta -----
-      const clases = {};
-      data.forEach(row => {
-        if (!clases[row.clasevalidada]) clases[row.clasevalidada] = 0;
-        clases[row.clasevalidada] += row.validos;
-      });
-
-      const pieData = [{
-        values: Object.values(clases),
-        labels: Object.keys(clases),
-        type: 'pie',
-        hole: 0.4
-      }];
-
-      Plotly.newPlot('pie-chart', pieData, {
-        title: 'Distribución de Clases Validadas',
-        height: 400
-      });
-
-      // ----- Barras -----
-      const fechas = data.map(row => new Date(row.fecha).toLocaleDateString());
-      const totalValidos = data.map(row => row.validos);
-      const totalInvalidos = data.map(row => row.invalidos);
-
-      const barData = [
-        {
-          x: fechas,
-          y: totalValidos,
-          type: 'bar',
-          name: 'Válidos',
-          marker: { color: 'green' }
-        },
-        {
-          x: fechas,
-          y: totalInvalidos,
-          type: 'bar',
-          name: 'Inválidos',
-          marker: { color: 'red' }
-        }
-      ];
-
-      Plotly.newPlot('bar-chart', barData, {
-        title: 'Predicciones por Fecha',
-        barmode: 'group',
-        height: 400
-      });
+    function showToast(msg, ok=true){
+      const toastEl = document.getElementById('toast');
+      const body = document.getElementById('toastBody');
+      body.textContent = msg;
+      toastEl.classList.toggle('text-bg-success', ok);
+      toastEl.classList.toggle('text-bg-danger', !ok);
+      new bootstrap.Toast(toastEl, { delay: 2200 }).show();
     }
 
-    document.addEventListener("DOMContentLoaded", cargarGraficos);
+    function syntaxHighlight(json) {
+      if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
+      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        function (match) {
+          let cls = 'number';
+          if (/^"/.test(match)) cls = /:$/.test(match) ? 'key' : 'string';
+          else if (/true|false/.test(match)) cls = 'boolean';
+          else if (/null/.test(match)) cls = 'null';
+          return `<span class="json-${cls}">${match}</span>`;
+        });
+    }
+
+    function updateFileInfo(file){
+      if (!file) { $('#fileInfo').text(''); return; }
+      const kb = (file.size/1024).toFixed(1);
+      $('#fileInfo').text(`${file.name} • ${kb} KB`);
+    }
+
+    function addToHistory(src){
+      const ul = document.getElementById('history');
+      const li = document.createElement('li');
+      li.className = 'd-flex align-items-center justify-content-between py-1';
+      li.innerHTML = `<img src="${src}" class="thumb me-2" alt="thumb"><span class="text-truncate">Procesado</span>`;
+      ul.prepend(li);
+      while (ul.children.length > 6) ul.removeChild(ul.lastChild);
+    }
+
+    $(document).ready(function () {
+      const $th = $('#threshold'), $thVal = $('#thVal');
+      $th.on('input', () => $thVal.text(parseFloat($th.val()).toFixed(2)));
+
+      $('#imageFile').change(function () {
+        const file = this.files[0];
+        updateFileInfo(file);
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = e => { $('#imagePreview').attr('src', e.target.result).show(); $('#noPreviewText').hide(); };
+          reader.readAsDataURL(file);
+        } else {
+          $('#imagePreview').attr('src','').hide();
+          $('#noPreviewText').show();
+        }
+      });
+
+      $('#uploadForm').submit(function (event) {
+        event.preventDefault();
+
+        $('#card-upload-image').block({ message: "Cargando..." });
+        $('#spinner-analisis').show();
+        $('#card-result-analisis').hide();
+
+        const formData = new FormData(this);
+
+        $.ajax({
+          url: '/process',
+          type: 'POST',
+          data: formData,
+          processData: false,
+          contentType: false,
+          success: function (response) {
+            $('#card-upload-image').unblock();
+            $('#spinner-analisis').hide();
+            $('#card-result-analisis').show();
+
+            const dataUrl = 'data:image/png;base64,' + response.image;
+            $('#imageProcessed').attr('src', dataUrl).show();
+            $('#btnDownload').attr('href', dataUrl);
+            lastImageDataUrl = dataUrl;
+            addToHistory(dataUrl);
+
+            document.getElementById('processedText').innerHTML = syntaxHighlight(response.json);
+
+            if ($('#autoCount').is(':checked')) {
+              counts(response.json);
+            }
+
+            $('#lastMsg').text('Análisis completado.');
+            showToast('Procesado con éxito ✅', true);
+
+            // Guardar en Supabase vía Flask
+            const payload = {
+              fecha: new Date().toISOString(),
+              claseValidada: document.getElementById('validClass').value,
+              umbral: parseFloat(document.getElementById('threshold').value),
+              validos: parseInt(document.getElementById('qtyValidText').textContent),
+              invalidos: parseInt(document.getElementById('qtyInvalidText').textContent),
+              imagen: lastImageDataUrl,
+              predicciones: response.json.predictions
+            };
+
+            fetch('/save_prediction', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }).then(res => res.json())
+              .then(data => console.log('📘 Guardado en Supabase:', data))
+              .catch(err => console.error('❌ Error al guardar en Supabase:', err));
+
+          },
+          error: function (error) {
+            $('#card-upload-image').unblock();
+            $('#spinner-analisis').hide();
+            $('#lastMsg').text('Ocurrió un error al procesar.');
+            showToast('Error al procesar ❌', false);
+            console.error(error);
+          }
+        });
+      });
+
+      $('#btnCopyJson').on('click', () => {
+        const text = document.getElementById('processedText').innerText;
+        navigator.clipboard.writeText(text).then(() => showToast('JSON copiado 📋', true));
+      });
+    });
+
+    function counts(json) {
+      const validClass = document.getElementById('validClass').value;
+      const threshold = parseFloat(document.getElementById('threshold').value);
+
+      let valid = 0, invalid = 0;
+      if (json && Array.isArray(json.predictions)) {
+        for (const p of json.predictions) {
+          const cls = p.class ?? p.label ?? p.name;
+          const conf = p.confidence ?? p.score ?? p.conf ?? 0;
+          if (cls === validClass && conf >= threshold) valid++;
+          else invalid++;
+        }
+      }
+
+      document.getElementById('qtyValidText').textContent = valid;
+      document.getElementById('qtyInvalidText').textContent = invalid;
+
+      if (document.getElementById('alertSwitch').checked && invalid > 0) {
+        showToast(`Alerta: ${invalid} inválidos detectados`, false);
+      }
+    }
   </script>
 </body>
 </html>
