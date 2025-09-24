@@ -9,7 +9,6 @@
   <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- evita 404 de favicon -->
 
   <!-- CSS propio -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/json.css') }}" />
   <style>
     body { background: #f7f8fb; }
     .card { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.05); }
@@ -48,7 +47,6 @@
               <div class="row g-2">
                 <div class="col-12">
                   <label class="form-label mb-1">Clase válida</label>
-                  <!-- Ajusta las opciones según tus clases reales -->
                   <select id="validClass" class="form-select">
                     <option value="ripen" selected>ripen</option>
                     <option value="unripen">unripen</option>
@@ -73,9 +71,7 @@
         <div class="card mt-3 sticky">
           <div class="card-header">Historial reciente</div>
           <div class="card-body">
-            <ul id="history" class="list-unstyled mb-0 small">
-              <!-- items dinámicos -->
-            </ul>
+            <ul id="history" class="list-unstyled mb-0 small"></ul>
           </div>
         </div>
       </div>
@@ -140,6 +136,9 @@
             </div>
             <hr>
             <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
+
+            <!-- Gráfico -->
+            <canvas id="chartValids" height="200"></canvas>
           </div>
         </div>
       </div>
@@ -175,14 +174,18 @@
     </div>
   </div>
 
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://malsup.github.io/jquery.blockUI.js"></script>
   <script src="https://unpkg.com/@instantdb/core@latest/dist/standalone/index.umd.cjs"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
     let lastImageDataUrl = null;
+    const { init, id } = window.instant;
+    let globalDB = null;
+    let chartInstance = null;
 
     function showToast(msg, ok=true){
       const toastEl = document.getElementById('toast');
@@ -218,15 +221,64 @@
       li.className = 'd-flex align-items-center justify-content-between py-1';
       li.innerHTML = `<img src="${src}" class="thumb me-2" alt="thumb"><span class="text-truncate">Procesado</span>`;
       ul.prepend(li);
-      // Limita a 6 items
       while (ul.children.length > 6) ul.removeChild(ul.lastChild);
     }
 
-    const { init, id } = window.instant;
-    let globalDB = null;
-
     async function initDB() {
-      globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' }); // puedes cambiar este ID si usas uno propio
+      globalDB = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
+    }
+
+    function counts(json) {
+      const validClass = document.getElementById('validClass').value;
+      const threshold = parseFloat(document.getElementById('threshold').value);
+
+      let valid = 0, invalid = 0;
+      if (json && Array.isArray(json.predictions)) {
+        for (const p of json.predictions) {
+          const cls = p.class ?? p.label ?? p.name;
+          const conf = p.confidence ?? p.score ?? p.conf ?? 0;
+          if (cls === validClass && conf >= threshold) valid++;
+          else invalid++;
+        }
+      }
+
+      document.getElementById('qtyValidText').textContent = valid;
+      document.getElementById('qtyInvalidText').textContent = invalid;
+
+      if (document.getElementById('alertSwitch').checked && invalid > 0) {
+        showToast(`Alerta: ${invalid} inválidos detectados`, false);
+      }
+    }
+
+    async function renderChart() {
+      if (!globalDB) return;
+      const registros = await globalDB.query(globalDB.q.predictions.all());
+      let totalValidos = 0, totalInvalidos = 0;
+      registros.forEach(r => {
+        totalValidos += r.validos;
+        totalInvalidos += r.invalidos;
+      });
+
+      const ctx = document.getElementById('chartValids').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Válidos', 'Inválidos'],
+          datasets: [{
+            data: [totalValidos, totalInvalidos],
+            backgroundColor: ['#22c55e', '#ef4444']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+            title: { display: true, text: 'Resumen de predicciones' }
+          }
+        }
+      });
     }
 
     $(document).ready(function () {
@@ -249,15 +301,13 @@
 
       $('#uploadForm').submit(function (event) {
         event.preventDefault();
-
         $('#card-upload-image').block({ message: "Cargando..." });
         $('#spinner-analisis').show();
         $('#card-result-analisis').hide();
 
         const formData = new FormData(this);
-
         $.ajax({
-          url: '/process',   // <-- tu ruta Flask
+          url: '/process',
           type: 'POST',
           data: formData,
           processData: false,
@@ -267,24 +317,24 @@
             $('#spinner-analisis').hide();
             $('#card-result-analisis').show();
 
-            // Imagen procesada (base64 PNG)
             const dataUrl = 'data:image/png;base64,' + response.image;
             $('#imageProcessed').attr('src', dataUrl).show();
             $('#btnDownload').attr('href', dataUrl);
             lastImageDataUrl = dataUrl;
             addToHistory(dataUrl);
 
-            // JSON coloreado
             document.getElementById('processedText').innerHTML = syntaxHighlight(response.json);
 
-            // Conteo
             if ($('#autoCount').is(':checked')) {
-              counts(response.json);
+              try {
+                const parsed = typeof response.json === "string" ? JSON.parse(response.json) : response.json;
+                counts(parsed);
+              } catch (e) { console.error("Error parseando JSON:", e); }
             }
 
             $('#lastMsg').text('Análisis completado.');
             showToast('Procesado con éxito ✅', true);
-            // Guardar predicción en InstantDB
+
             if (globalDB) {
               globalDB.transact(globalDB.tx.predictions[id()].create({
                 fecha: new Date().toISOString(),
@@ -296,7 +346,7 @@
                 predicciones: response.json.predictions
               }));
             }
-
+            renderChart();
           },
           error: function (error) {
             $('#card-upload-image').unblock();
@@ -308,46 +358,11 @@
         });
       });
 
-      // Copiar JSON
       $('#btnCopyJson').on('click', () => {
         const text = document.getElementById('processedText').innerText;
         navigator.clipboard.writeText(text).then(() => showToast('JSON copiado 📋', true));
       });
     });
-
-    function counts(json) {
-      // Ajusta estas claves si tu API usa otros nombres
-      const validClass = document.getElementById('validClass').value;
-      const threshold = parseFloat(document.getElementById('threshold').value);
-
-      let valid = 0, invalid = 0;
-
-      if (json && Array.isArray(json.predictions)) {
-        for (const p of json.predictions) {
-          const cls = p.class ?? p.label ?? p.name;   // intenta varias claves
-          const conf = p.confidence ?? p.score ?? p.conf ?? 0;
-
-          if (cls === validClass && conf >= threshold) valid++;
-          else invalid++;
-        }
-      }
-
-      document.getElementById('qtyValidText').textContent = valid;
-      document.getElementById('qtyInvalidText').textContent = invalid;
-
-      // Alerta opcional
-      if (document.getElementById('alertSwitch').checked && invalid > 0) {
-        showToast(`Alerta: ${invalid} inválidos detectados`, false);
-      }
-    }
-
-    async function mostrarHistorialInstantDB() {
-      if (!globalDB) return;
-      const registros = await globalDB.query(globalDB.q.predictions.all());
-      console.log('📘 Historial en InstantDB:', registros);
-    }
-
-
   </script>
 </body>
 </html>
