@@ -18,7 +18,6 @@ def home():
 @app.route("/dashboard")
 def dashboard():
     try:
-        # 🔹 Obtener datos de InstantDB
         response = requests.get(INSTANTDB_API_URL, headers=HEADERS)
         data = response.json()
 
@@ -30,13 +29,11 @@ def dashboard():
         if df.empty:
             return "No hay datos para mostrar."
 
-        # 🔹 Asegurarse de que la columna 'fecha' exista y esté en formato fecha
         if "fecha" in df.columns:
             df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce").dt.date
         else:
             return "Error: No se encontró la columna 'fecha'."
 
-        # 🔹 Gráfico de torta por claseValidada
         if "claseValidada" not in df.columns:
             return "Error: No se encontró la columna 'claseValidada'."
         
@@ -44,7 +41,6 @@ def dashboard():
         pie_chart = go.Figure(data=[go.Pie(labels=pie_data['index'], values=pie_data['claseValidada'])])
         pie_html = pie_chart.to_html(full_html=False)
 
-        # 🔹 Gráfico de barras por fecha
         bar_data = df.groupby("fecha").size().reset_index(name="total")
         bar_chart = go.Figure(data=[go.Bar(x=bar_data["fecha"], y=bar_data["total"])])
         bar_html = bar_chart.to_html(full_html=False)
