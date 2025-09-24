@@ -14,6 +14,7 @@
   <div class="container py-4">
     <h1 class="text-center mb-4">Panel de verificación</h1>
 
+    <!-- Gráfico de torta -->
     <div class="card mb-4">
       <div class="card-header">Gráfico acumulado (torta)</div>
       <div class="card-body">
@@ -21,6 +22,7 @@
       </div>
     </div>
 
+    <!-- Gráfico de barras -->
     <div class="card">
       <div class="card-header">Historial completo de análisis (barras)</div>
       <div class="card-body">
@@ -29,67 +31,76 @@
     </div>
   </div>
 
-  <script type="text/javascript">
-    const { init, q } = window.instant;
+  <script>
+    const { init, id } = window.instant;
 
-    async function cargarGraficosDesdeInstantDB() {
-      try {
-        const db = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a' });
-        const resultados = await db.query(q.predictions.all());
-
-        if (!resultados || resultados.length === 0) {
-          document.getElementById('pieChart').innerHTML = '<p class="text-muted">Sin datos para mostrar.</p>';
-          document.getElementById('barChart').innerHTML = '<p class="text-muted">Sin datos para mostrar.</p>';
-          return;
-        }
-
-        // Pie chart acumulado
-        const totalValidos = resultados.reduce((sum, r) => sum + (r.validos || 0), 0);
-        const totalInvalidos = resultados.reduce((sum, r) => sum + (r.invalidos || 0), 0);
-
-        Plotly.newPlot('pieChart', [{
-          values: [totalValidos, totalInvalidos],
-          labels: ['Válidos', 'Inválidos'],
-          type: 'pie',
-          marker: { colors: ['#22c55e', '#ef4444'] }
-        }], {
-          title: 'Distribución total de análisis',
-          margin: { t: 40, b: 30, l: 20, r: 20 }
-        });
-
-        // Bar chart por fecha
-        const fechas = resultados.map(r => new Date(r.fecha).toLocaleString());
-        const validos = resultados.map(r => r.validos);
-        const invalidos = resultados.map(r => r.invalidos);
-
-        Plotly.newPlot('barChart', [
-          {
-            x: fechas,
-            y: validos,
-            name: 'Válidos',
-            type: 'bar',
-            marker: { color: '#22c55e' }
-          },
-          {
-            x: fechas,
-            y: invalidos,
-            name: 'Inválidos',
-            type: 'bar',
-            marker: { color: '#ef4444' }
-          }
-        ], {
-          barmode: 'group',
-          title: 'Historial de análisis',
-          xaxis: { title: 'Fecha' },
-          yaxis: { title: 'Cantidad' }
-        });
-
-      } catch (error) {
-        console.error('Error al cargar datos desde InstantDB:', error);
+    // 💡 Define el esquema tal cual tu base
+    const schema = {
+      predictions: {
+        id: 'string',
+        claseValidada: 'string',
+        fecha: 'string',
+        imagen: 'string',
+        invalidos: 'number',
+        predicciones: 'json',
+        umbral: 'number',
+        validos: 'number'
       }
+    };
+
+    async function cargarGraficos() {
+      const db = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a', schema });
+      const resultados = await db.query(db.q.predictions.all());
+
+      if (!resultados || resultados.length === 0) {
+        document.getElementById('pieChart').innerHTML = '<p class="text-muted">Sin datos para mostrar.</p>';
+        document.getElementById('barChart').innerHTML = '<p class="text-muted">Sin datos para mostrar.</p>';
+        return;
+      }
+
+      // Torta acumulada
+      const totalValidos = resultados.reduce((s, r) => s + (r.validos || 0), 0);
+      const totalInvalidos = resultados.reduce((s, r) => s + (r.invalidos || 0), 0);
+
+      Plotly.newPlot('pieChart', [{
+        values: [totalValidos, totalInvalidos],
+        labels: ['Válidos', 'Inválidos'],
+        type: 'pie',
+        marker: { colors: ['#22c55e', '#ef4444'] }
+      }], {
+        title: 'Distribución total de análisis',
+        margin: { t: 40, b: 30 }
+      });
+
+      // Barras por fecha
+      const fechas = resultados.map(r => new Date(r.fecha).toLocaleString());
+      const validos = resultados.map(r => r.validos || 0);
+      const invalidos = resultados.map(r => r.invalidos || 0);
+
+      Plotly.newPlot('barChart', [
+        {
+          x: fechas,
+          y: validos,
+          name: 'Válidos',
+          type: 'bar',
+          marker: { color: '#22c55e' }
+        },
+        {
+          x: fechas,
+          y: invalidos,
+          name: 'Inválidos',
+          type: 'bar',
+          marker: { color: '#ef4444' }
+        }
+      ], {
+        barmode: 'group',
+        title: 'Historial de análisis',
+        xaxis: { title: 'Fecha de análisis' },
+        yaxis: { title: 'Cantidad' }
+      });
     }
 
-    window.addEventListener('DOMContentLoaded', cargarGraficosDesdeInstantDB);
+    window.addEventListener('DOMContentLoaded', cargarGraficos);
   </script>
 </body>
 
