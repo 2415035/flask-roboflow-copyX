@@ -1,107 +1,61 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Panel de verificación</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Plotly CDN -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <script src="https://unpkg.com/@instantdb/core@latest/dist/standalone/index.umd.js"></script>
-</head>
 
-<body class="bg-light">
-  <div class="container py-4">
-    <h1 class="text-center mb-4">Panel de verificación</h1>
-
-    <!-- Gráfico de torta -->
-    <div class="card mb-4">
-      <div class="card-header">Gráfico acumulado (torta)</div>
-      <div class="card-body">
-        <div id="pieChart" style="height: 350px;"></div>
-      </div>
-    </div>
-
-    <!-- Gráfico de barras -->
-    <div class="card">
-      <div class="card-header">Historial completo de análisis (barras)</div>
-      <div class="card-body">
-        <div id="barChart" style="height: 400px;"></div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const { init, id } = window.instant;
-
-    // 💡 Define el esquema tal cual tu base
-    const schema = {
-      predictions: {
-        id: 'string',
-        claseValidada: 'string',
-        fecha: 'string',
-        imagen: 'string',
-        invalidos: 'number',
-        predicciones: 'json',
-        umbral: 'number',
-        validos: 'number'
-      }
-    };
-
-    async function cargarGraficos() {
-      const db = await init({ appId: '646b5cf0-25ff-4084-9ed9-505666a1bb1a', schema });
-      const resultados = await db.query(db.q.predictions.all());
-
-      if (!resultados || resultados.length === 0) {
-        document.getElementById('pieChart').innerHTML = '<p class="text-muted">Sin datos para mostrar.</p>';
-        document.getElementById('barChart').innerHTML = '<p class="text-muted">Sin datos para mostrar.</p>';
-        return;
-      }
-
-      // Torta acumulada
-      const totalValidos = resultados.reduce((s, r) => s + (r.validos || 0), 0);
-      const totalInvalidos = resultados.reduce((s, r) => s + (r.invalidos || 0), 0);
-
-      Plotly.newPlot('pieChart', [{
-        values: [totalValidos, totalInvalidos],
-        labels: ['Válidos', 'Inválidos'],
-        type: 'pie',
-        marker: { colors: ['#22c55e', '#ef4444'] }
-      }], {
-        title: 'Distribución total de análisis',
-        margin: { t: 40, b: 30 }
-      });
-
-      // Barras por fecha
-      const fechas = resultados.map(r => new Date(r.fecha).toLocaleString());
-      const validos = resultados.map(r => r.validos || 0);
-      const invalidos = resultados.map(r => r.invalidos || 0);
-
-      Plotly.newPlot('barChart', [
-        {
-          x: fechas,
-          y: validos,
-          name: 'Válidos',
-          type: 'bar',
-          marker: { color: '#22c55e' }
-        },
-        {
-          x: fechas,
-          y: invalidos,
-          name: 'Inválidos',
-          type: 'bar',
-          marker: { color: '#ef4444' }
-        }
-      ], {
-        barmode: 'group',
-        title: 'Historial de análisis',
-        xaxis: { title: 'Fecha de análisis' },
-        yaxis: { title: 'Cantidad' }
-      });
+  <!-- Estilos básicos -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 20px;
+      padding: 0;
     }
 
-    window.addEventListener('DOMContentLoaded', cargarGraficos);
-  </script>
-</body>
+    h1 {
+      text-align: center;
+      color: #333;
+    }
 
+    .chart-container {
+      width: 90%;
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .chart-container h3 {
+      margin-top: 0;
+      text-align: center;
+      color: #444;
+    }
+
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Panel de verificación</h1>
+
+  <div class="chart-container">
+    <h3>Gráfico acumulado por clase (torta)</h3>
+    {{ pie_html | safe }}
+  </div>
+
+  <div class="chart-container">
+    <h3>Historial de análisis por fecha (barras)</h3>
+    {{ bar_html | safe }}
+  </div>
+</body>
 </html>
