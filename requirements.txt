@@ -1,9 +1,7 @@
 Flask
 gunicorn
-pillow
-opencv-python-headless
-numpy
 pandas
 plotly
 supabase
-inference
+inference-sdk==1.3.6
+pillow==10.3.0
