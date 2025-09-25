@@ -112,6 +112,9 @@ def process():
         })
 
     except Exception as e:
+        import traceback
+        print("=== ERROR EN PROCESS ===")
+        traceback.print_exc()  # Muestra el error completo en los logs de Render
         return jsonify({"error": str(e)}), 500
 
 # === Run local o Render ===
