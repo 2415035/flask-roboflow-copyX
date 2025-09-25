@@ -21,7 +21,30 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    try:
+        response = supabase.table("predictions").select("*").execute()
+        data = response.data or []
+
+        conteo = {"ripen": 0, "unripe": 0}
+        for fila in data:
+            for pred in fila.get("predicciones", []):
+                clase = pred.get("class")
+                if clase in conteo:
+                    conteo[clase] += 1
+
+        import plotly.express as px
+        import pandas as pd
+
+        df = pd.DataFrame(list(conteo.items()), columns=["clase", "cantidad"])
+
+        fig_bar = px.bar(df, x="clase", y="cantidad", title="Conteo de predicciones")
+        fig_pie = px.pie(df, names="clase", values="cantidad", title="Distribución")
+
+        return render_template("index.html",
+                               graph_bar=fig_bar.to_html(full_html=False),
+                               graph_pie=fig_pie.to_html(full_html=False))
+    except Exception as e:
+        return f"<h2>Error cargando gráficos: {str(e)}</h2>"
 
 @app.route("/process", methods=["POST"])
 def process():
