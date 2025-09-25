@@ -53,13 +53,24 @@ def dashboard():
     return render_template("dashboard.html", graph_bar=graph_bar, graph_pie=graph_pie, data=data)
 
 # === Procesar imagen con Roboflow + guardar en Supabase ===
-@app.route("/process", methods=["POST"])
+@app.route('/process', methods=['POST'])
 def process():
-    if "imageFile" not in request.files:
-        return jsonify({"error": "No image provided"}), 400
+    try:
+        image = request.files['imageFile']
+        if not image:
+            return jsonify({"error": "No se recibió la imagen"}), 400
+
+        clase_validada_form = request.form.get("clasevalidada", "Palta")
+        try:
+            umbral_form = float(request.form.get("umbral", 0.5))
+        except (TypeError, ValueError):
+            umbral_form = 0.5
 
     image_file = request.files["imageFile"]
+    if not image:
+        return jsonify({"error": "No se envió ninguna imagen"}), 400
     image_bytes = image_file.read()
+    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
     # Guardar imagen temporalmente
     with tempfile.NamedTemporaryFile(delete=True) as tmp:
