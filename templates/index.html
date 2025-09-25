@@ -1,45 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clasificador de Piñas</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- ✅ Plotly moderno sin warning -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
-
   <style>
+    body {
+      background-color: #f9fafb;
+    }
     #barGraph, #pieGraph {
       min-height: 300px;
+    }
+    .preview-image {
+      max-height: 300px;
+      object-fit: contain;
     }
   </style>
 </head>
 <body>
   <div class="container py-4">
-    <h1 class="text-center mb-4">Clasificador de Piñas (Ripen / Unripe)</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
+    <h1 class="text-center mb-5">🍍 Clasificador de Piñas (Ripen / Unripen)</h1>
+
+    <!-- Formulario -->
+    <form id="uploadForm" enctype="multipart/form-data" class="card p-4 shadow-sm mb-4">
       <div class="mb-3">
-        <label for="imageFile" class="form-label">Selecciona una imagen</label>
-        <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/*" required>
+        <label for="imageFile" class="form-label">📤 Selecciona una imagen de piña</label>
+        <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/*" required />
+      </div>
+      <div class="text-center mb-3">
+        <img id="previewImage" class="preview-image border rounded d-none" alt="Vista previa" />
       </div>
       <div class="d-grid">
-        <button type="submit" class="btn btn-primary">Procesar Imagen</button>
+        <button type="submit" class="btn btn-success">Procesar Imagen</button>
       </div>
     </form>
 
-    <hr class="my-4"/>
+    <!-- Resultado -->
+    <div id="resultSection" style="display: none;" class="card p-4 shadow-sm mb-5">
+      <h4 class="mb-3">🧪 Resultado de la predicción:</h4>
+      <img id="resultImage" class="img-fluid rounded mb-3 border" alt="Procesada" />
+      <pre id="jsonOutput" class="bg-light p-3 rounded border small"></pre>
+    </div>
 
-    <div id="resultSection" style="display: none;">
-      <h4>Resultado:</h4>
-      <img id="resultImage" class="img-fluid rounded mb-3" alt="Procesada"/>
-      <pre id="jsonOutput" class="bg-light p-3 rounded border"></pre>
+    <!-- Gráficos -->
+    <h2 class="text-center mb-4">📊 Estadísticas de predicciones</h2>
+    <div class="row">
+      <div class="col-md-6">
+        <div id="barGraph">Cargando gráfico de barras...</div>
+      </div>
+      <div class="col-md-6">
+        <div id="pieGraph">Cargando gráfico de pastel...</div>
+      </div>
     </div>
   </div>
 
+  <!-- Scripts -->
   <script>
     const form = document.getElementById("uploadForm");
-    form.addEventListener("submit", async function(event) {
+    const previewImage = document.getElementById("previewImage");
+
+    // Mostrar vista previa
+    document.getElementById("imageFile").addEventListener("change", function () {
+      const file = this.files[0];
+      if (file) {
+        previewImage.classList.remove("d-none");
+        previewImage.src = URL.createObjectURL(file);
+      }
+    });
+
+    // Enviar imagen al backend
+    form.addEventListener("submit", async function (event) {
       event.preventDefault();
       const fileInput = document.getElementById("imageFile");
       const formData = new FormData();
@@ -56,69 +88,52 @@
         document.getElementById("jsonOutput").textContent = JSON.stringify(data.json, null, 2);
       }
     });
-  </script>
-  <hr class="my-5" />
-    <h2 class="text-center">📊 Estadísticas de predicciones</h2>
-    <div class="row">
-      <div class="col-md-6">
-        <div id="barGraph">Cargando gráfico de barras...</div>
-      </div>
-      <div class="col-md-6">
-        <div id="pieGraph">Cargando gráfico de pastel...</div>
-      </div>
-  </div>
-  
 
-    <script>
-      async function cargarGraficos() {
-        try {
-          const res = await fetch('/datos');  // Endpoint que entrega los datos en JSON
-          const datos = await res.json();
-    
-          // Separar por clases
-          const conteo = {};
-          datos.forEach(item => {
-            item.predicciones.forEach(pred => {
-              const clase = pred.class;
-              conteo[clase] = (conteo[clase] || 0) + 1;
-            });
+    // Cargar y actualizar gráficos
+    async function cargarGraficos() {
+      try {
+        const res = await fetch("/datos");
+        const datos = await res.json();
+
+        const conteo = {};
+        datos.forEach(item => {
+          item.predicciones.forEach(pred => {
+            const clase = pred.class;
+            conteo[clase] = (conteo[clase] || 0) + 1;
           });
-    
-          const clases = Object.keys(conteo);
-          const cantidades = Object.values(conteo);
-    
-          // Gráfico de barras
-          const bar = {
-            x: clases,
-            y: cantidades,
-            type: 'bar',
-            marker: { color: 'blue' }
-          };
-          Plotly.react('barGraph', [bar], {
-            title: 'Conteo de predicciones',
-            yaxis: { title: 'Cantidad' },
-            xaxis: { title: 'Clase' }
-          });
-    
-          // Gráfico de pastel
-          const pie = {
-            labels: clases,
-            values: cantidades,
-            type: 'pie'
-          };
-          Plotly.react('pieGraph', [pie], {
-            title: 'Distribución de clases'
-          });
-    
-        } catch (error) {
-          console.error("Error cargando gráficos:", error);
-        }
+        });
+
+        const clases = Object.keys(conteo);
+        const cantidades = Object.values(conteo);
+
+        // Gráfico de barras
+        Plotly.react("barGraph", [{
+          x: clases,
+          y: cantidades,
+          type: "bar",
+          marker: { color: "seagreen" }
+        }], {
+          title: "Conteo de predicciones",
+          yaxis: { title: "Cantidad" },
+          xaxis: { title: "Clase" }
+        });
+
+        // Gráfico de pastel
+        Plotly.react("pieGraph", [{
+          labels: clases,
+          values: cantidades,
+          type: "pie"
+        }], {
+          title: "Distribución de clases"
+        });
+
+      } catch (error) {
+        console.error("Error cargando gráficos:", error);
       }
-    
-      // Actualizar cada 5 segundos
-      cargarGraficos();
-      setInterval(cargarGraficos, 5000);
+    }
+
+    cargarGraficos();
+    setInterval(cargarGraficos, 5000);
   </script>
-  
 </body>
 </html>
