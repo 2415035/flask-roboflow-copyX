@@ -1,9 +1,9 @@
-flask
+Flask
 gunicorn
-opencv-python-headless
 pillow
+opencv-python-headless
+numpy
 pandas
 plotly
 supabase
 inference
-
