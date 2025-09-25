@@ -6,4 +6,4 @@ requests
 supabase
 gunicorn
 opencv-python-headless
-inference @ git+https://github.com/roboflow/inference.git
+inference-development @ git+https://github.com/roboflow/inference.git#egg=inference-development
