@@ -6,6 +6,12 @@
   <title>Clasificador de Piñas</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> <!-- ✅ AGREGA ESTO -->
+  <style>
+    .plotly-graph-div {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
 </head>
 <body>
   <div class="container py-4">
@@ -53,10 +59,14 @@
     <h2 class="text-center">📊 Estadísticas de predicciones</h2>
     <div class="row">
       <div class="col-md-6">
-        <div id="barGraph">Cargando gráfico de barras...</div>
+        <div id="bar-chart-container" style="height: 400px;">
+          {{ graph_bar|safe }}
+        </div>
       </div>
       <div class="col-md-6">
-        <div id="pieGraph">Cargando gráfico de pastel...</div>
+        <div id="pie-chart-container" style="height: 400px;">
+          {{ graph_pie|safe }}
+        </div>
       </div>
   </div>
   
