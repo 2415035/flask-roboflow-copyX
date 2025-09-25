@@ -94,7 +94,7 @@
             type: 'bar',
             marker: { color: 'blue' }
           };
-          Plotly.newPlot('barGraph', [bar], {
+          Plotly.react('barGraph', [bar], {
             title: 'Conteo de predicciones',
             yaxis: { title: 'Cantidad' },
             xaxis: { title: 'Clase' }
@@ -106,7 +106,7 @@
             values: cantidades,
             type: 'pie'
           };
-          Plotly.newPlot('pieGraph', [pie], {
+          Plotly.react('pieGraph', [pie], {
             title: 'Distribución de clases'
           });
     
