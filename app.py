@@ -73,7 +73,11 @@ def process():
 
     # Obtener clase válida y umbral desde el formulario
     clase_validada_form = request.form.get("clasevalidada", "Palta")
-    umbral = float(request.form.get("umbral", 0.5))
+    
+    try:
+        umbral_form = float(request.form.get("umbral", 0.5))
+    except (TypeError, ValueError):
+        umbral_form = 0.5
     predicciones = result["predictions"]
     validos = sum(1 for p in predicciones if p["confidence"] >= umbral)
     invalidos = len(predicciones) - validos
