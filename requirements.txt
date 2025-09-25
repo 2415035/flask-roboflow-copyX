@@ -1,8 +1,7 @@
-Flask
-gunicorn
+flask
 pandas
 plotly
+Pillow
+requests
 supabase
-git+https://github.com/roboflow/inference.git
-pillow==10.3.0
-opencv-python-headless
+gunicorn
