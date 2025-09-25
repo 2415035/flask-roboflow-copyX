@@ -7,18 +7,11 @@
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-
-  <!-- CSS propio -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/json.css') }}" />
   <style>
     body { background: #f7f8fb; }
     .card { border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.05); }
-    .json-stringify { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; }
-    .json-key { color: #1d4ed8; }
-    .json-string { color: #059669; }
-    .json-number { color: #b45309; }
-    .json-boolean { color: #dc2626; }
-    .json-null { color: #6b7280; }
+    .json-stringify { white-space: pre-wrap; font-family: monospace; font-size: .9rem; }
     .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
     .sticky { position: sticky; top: 1rem; }
   </style>
@@ -28,55 +21,17 @@
     <h1 class="mb-4 text-center">Panel de verificación</h1>
 
     <div class="row g-3">
-      <!-- Col: Cargar -->
+      <!-- Columna: Historial -->
       <div class="col-12 col-lg-3">
-        <div class="card sticky" id="card-upload-image">
-          <div class="card-header">Cargar imagen</div>
-          <div class="card-body">
-            <form id="uploadForm" enctype="multipart/form-data">
-              <div class="mb-3">
-                <label for="imageFile" class="form-label">Seleccione una imagen:</label>
-                <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/*" required>
-                <div class="form-text" id="fileInfo"></div>
-              </div>
-
-              <div class="py-3 text-center">
-                <img id="imagePreview" src="#" alt="Vista previa" class="img-fluid rounded" style="display:none;"/>
-                <p id="noPreviewText" class="text-secondary">Aún no hay imagen seleccionada.</p>
-              </div>
-
-              <div class="row g-2">
-                <div class="col-12">
-                  <label class="form-label mb-1">Clase válida</label>
-                  <select id="validClass" class="form-select">
-                    <option value="Palta" selected>Palta</option>
-                    <option value="Mandarina">Mandarina</option>
-                    <option value="Otro">Otro</option>
-                  </select>
-                </div>
-                <div class="col-12">
-                  <label for="threshold" class="form-label">Umbral de confianza: <span id="thVal">0.50</span></label>
-                  <input type="range" class="form-range" min="0" max="1" step="0.01" value="0.50" id="threshold">
-                </div>
-              </div>
-
-              <div class="d-grid mt-3">
-                <button type="submit" class="btn btn-primary">Procesar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- Historial -->
-        <div class="card mt-3 sticky">
+        <div class="card sticky">
           <div class="card-header">Historial reciente</div>
           <div class="card-body">
-            <ul id="history" class="list-unstyled mb-0 small">
+            <ul class="list-unstyled mb-0 small">
               {% if data %}
                 {% for row in data|reverse|slice(0,6) %}
                   <li class="d-flex align-items-center justify-content-between py-1">
-                    <span class="text-truncate">{{ row.filename }} ({{ row.label }})</span>
-                    <span class="badge bg-secondary">{{ row.confidence }}</span>
+                    <span class="text-truncate">{{ row.imagen }} ({{ row.clasevalidada }})</span>
+                    <span class="badge bg-secondary">{{ row.umbral }}</span>
                   </li>
                 {% endfor %}
               {% else %}
@@ -87,98 +42,46 @@
         </div>
       </div>
 
-      <!-- Col: Análisis -->
+      <!-- Columna: Análisis -->
       <div class="col-12 col-lg-5">
         <div class="card h-100">
-          <div class="card-header d-flex align-items-center justify-content-between">
-            <span>Análisis</span>
-            <div class="form-check form-switch m-0">
-              <input class="form-check-input" type="checkbox" id="autoCount" checked>
-              <label class="form-check-label" for="autoCount">Contar automático</label>
-            </div>
-          </div>
+          <div class="card-header">Última imagen procesada</div>
           <div class="card-body text-center">
-            <div class="d-flex flex-column gap-3 align-items-center">
-              <div class="spinner-border" role="status" id="spinner-analisis" style="display:none;">
-                <span class="visually-hidden">Cargando...</span>
+            <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
+            <div class="pt-3 d-flex gap-2 justify-content-center">
+              <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver JSON</button>
+              <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
+            </div>
+            <div class="row pt-4">
+              <div class="col">
+                <div class="alert alert-success">Válidos: <strong id="qtyValidText">0</strong></div>
               </div>
-
-              <div id="card-result-analisis" style="display:none;">
-                <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
-                <div class="pt-3 d-flex gap-2 justify-content-center">
-                  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
-                  <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
-                </div>
-              </div>
-
-              <div class="text-start w-100">
-                <div class="row g-2">
-                  <div class="col-6">
-                    <div class="alert alert-success py-2 m-0">
-                      <strong id="qtyValidText">0</strong> válidos
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="alert alert-danger py-2 m-0">
-                      <strong id="qtyInvalidText">0</strong> inválidos
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="text-start w-100">
-                <small class="text-muted">
-                  *Válido = clase seleccionada + confianza ≥ umbral.
-                </small>
+              <div class="col">
+                <div class="alert alert-danger">Inválidos: <strong id="qtyInvalidText">0</strong></div>
               </div>
             </div>
+            <small class="text-muted">*Válido = clase seleccionada + confianza ≥ umbral.</small>
           </div>
         </div>
       </div>
 
-      <!-- Col: Acciones -->
+      <!-- Columna: Gráficos -->
       <div class="col-12 col-lg-4">
         <div class="card h-100">
-          <div class="card-header">Acciones</div>
+          <div class="card-header">Gráficos</div>
           <div class="card-body">
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="alertSwitch">
-              <label class="form-check-label" for="alertSwitch">Alertar si inválidos &gt; 0</label>
-            </div>
-            <hr>
-            <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
-          </div>
-        </div>
-      </div>
-    </div>
+            <button class="btn btn-sm btn-outline-primary mb-2" onclick="location.reload()">🔄 Actualizar</button>
 
-    <!-- 📊 Gráficos -->
-    <div class="row g-3 mt-4">
-      <div class="col-12 col-lg-6">
-        <div class="card h-100">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span>Gráfico de barras</span>
-            <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">🔄</button>
-          </div>
-          <div class="card-body text-center">
             {% if graph_bar %}
-              {{ graph_bar|safe }}
+              <div>{{ graph_bar|safe }}</div>
             {% else %}
               <p class="text-muted">No hay datos aún.</p>
             {% endif %}
-          </div>
-        </div>
-      </div>
 
-      <div class="col-12 col-lg-6">
-        <div class="card h-100">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span>Gráfico de torta</span>
-            <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">🔄</button>
-          </div>
-          <div class="card-body text-center">
+            <hr>
+
             {% if graph_pie %}
-              {{ graph_pie|safe }}
+              <div>{{ graph_pie|safe }}</div>
             {% else %}
               <p class="text-muted">No hay datos aún.</p>
             {% endif %}
@@ -207,78 +110,14 @@
     </div>
   </div>
 
-  <!-- Toasts -->
-  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080;">
-    <div id="toast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="d-flex">
-        <div class="toast-body" id="toastBody">Mensaje</div>
-        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
-      </div>
-    </div>
-  </div>
-
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-  <script src="https://malsup.github.io/jquery.blockUI.js"></script>
-
   <script>
-    function showToast(msg, ok=true){
-      const toastEl = document.getElementById('toast');
-      const body = document.getElementById('toastBody');
-      body.textContent = msg;
-      toastEl.classList.toggle('text-bg-success', ok);
-      toastEl.classList.toggle('text-bg-danger', !ok);
-      new bootstrap.Toast(toastEl, { delay: 2200 }).show();
-    }
-
-    $('#imageFile').change(function () {
-      const file = this.files[0];
-      if (file) {
-        $('#fileInfo').text(`${file.name} • ${(file.size/1024).toFixed(1)} KB`);
-        const reader = new FileReader();
-        reader.onload = e => { $('#imagePreview').attr('src', e.target.result).show(); $('#noPreviewText').hide(); };
-        reader.readAsDataURL(file);
-      } else {
-        $('#imagePreview').attr('src','').hide();
-        $('#noPreviewText').show();
-      }
-    });
-
-    $('#uploadForm').submit(function (event) {
-      event.preventDefault();
-      $('#card-upload-image').block({ message: "Cargando..." });
-
-      const file = document.getElementById("imageFile").files[0];
-      const label = document.getElementById("validClass").value;
-      const confidence = parseFloat(document.getElementById("threshold").value);
-
-      $.ajax({
-        url: "/process",
-        type: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({
-          filename: file ? file.name : "sin_nombre.jpg",
-          label: label,
-          confidence: confidence
-        }),
-        success: function (resp) {
-          $('#card-upload-image').unblock();
-          $('#lastMsg').text('Análisis completado.');
-          showToast('✅ Predicción guardada en Supabase', true);
-          location.reload();
-        },
-        error: function (err) {
-          $('#card-upload-image').unblock();
-          $('#lastMsg').text('Ocurrió un error al procesar.');
-          showToast('❌ Error al procesar', false);
-          console.error(err);
-        }
-      });
-    });
-
-    $('#btnCopyJson').on('click', () => {
+    document.getElementById('btnCopyJson').addEventListener('click', function () {
       const text = document.getElementById('processedText').innerText;
-      navigator.clipboard.writeText(text).then(() => showToast('JSON copiado 📋', true));
+      navigator.clipboard.writeText(text).then(() => {
+        alert("JSON copiado al portapapeles");
+      });
     });
   </script>
 </body>
