@@ -64,6 +64,25 @@
       window.location.reload();
     }, 10000); // cada 10 segundos
   </script>
+
+  <script>
+    async function cargarGraficos() {
+      try {
+        const res = await fetch("/graficos");
+        const data = await res.json();
+        document.getElementById("barGraph").innerHTML = data.bar;
+        document.getElementById("pieGraph").innerHTML = data.pie;
+      } catch (e) {
+        console.error("Error cargando gráficos:", e);
+      }
+    }
+
+    // Cargar al inicio
+    cargarGraficos();
+  
+    // Actualizar cada 10 segundos
+    setInterval(cargarGraficos, 10000);
+  </script>
   
 </body>
 </html>
