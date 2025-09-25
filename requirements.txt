@@ -6,3 +6,4 @@ inference-sdk
 supabase
 gunicorn
 plotly
+pandas
