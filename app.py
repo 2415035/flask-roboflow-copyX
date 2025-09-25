@@ -18,9 +18,9 @@ app = Flask(__name__)
 # === Configuración Roboflow ===
 CLIENT = InferenceHTTPClient(
     api_url="https://serverless.roboflow.com",
-    api_key="jBVSfkwNV6KBQ29SYJ5H"  # 🔒 Usa tu API KEY real
+    api_key=os.environ.get("ROBOFLOW_API_KEY")  # 🔒 Usa variable de entorno en Render
 )
-MODEL_ID = "pineapple-xooc7-5fxts/1"
+MODEL_ID = os.environ.get("ROBOFLOW_MODEL_ID", "pineapple-xooc7-5fxts/1")
 
 # === Configuración Supabase ===
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -30,44 +30,41 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # === Rutas principales ===
 @app.route("/")
 def home():
-    return render_template("upload.html", title="Uploader")
+    return render_template("dashboard.html", title="Panel de verificación")
 
 @app.route("/dashboard")
 def dashboard():
     response = supabase.table("predictions").select("*").execute()
     data = response.data if response.data else []
 
+    graph_bar, graph_pie = None, None
     if data:
         df = pd.DataFrame(data)
-        if 'clasevalidada' in df.columns:
+        if "clasevalidada" in df.columns:
             fig_bar = px.bar(df, x="clasevalidada", title="Conteo de clases validadas")
             fig_pie = px.pie(df, names="clasevalidada", title="Distribución de clases")
             graph_bar = fig_bar.to_html(full_html=False)
             graph_pie = fig_pie.to_html(full_html=False)
-        else:
-            graph_bar, graph_pie = None, None
-    else:
-        graph_bar, graph_pie = None, None
 
     return render_template("dashboard.html", graph_bar=graph_bar, graph_pie=graph_pie, data=data)
 
 # === Procesar imagen con Roboflow + guardar en Supabase ===
-@app.route('/process', methods=['POST'])
+@app.route("/process", methods=["POST"])
 def process():
     try:
-        image_file = request.files.get('imageFile')
+        image_file = request.files.get("imageFile")
         if not image_file:
             return jsonify({"error": "No se recibió la imagen"}), 400
 
         image_bytes = image_file.read()
 
-        # Guardar imagen temporal para procesar con Roboflow
+        # Guardar temporalmente para Roboflow
         with tempfile.NamedTemporaryFile(delete=True) as tmp:
             tmp.write(image_bytes)
             tmp.flush()
             result = CLIENT.infer(tmp.name, model_id=MODEL_ID)
 
-        # Convertir imagen a array
+        # Convertir imagen a numpy array
         img = Image.open(io.BytesIO(image_bytes))
         img = np.array(img)
 
@@ -79,7 +76,7 @@ def process():
             umbral = 0.5
 
         # Contar predicciones
-        predicciones = result["predictions"]
+        predicciones = result.get("predictions", [])
         validos = sum(1 for p in predicciones if p["confidence"] >= umbral and p["class"] == clase_validada)
         invalidos = len(predicciones) - validos
 
@@ -105,7 +102,7 @@ def process():
             "predicciones": predicciones
         }).execute()
 
-        # Imagen a base64
+        # Imagen procesada a base64
         _, img_encoded = cv2.imencode(".png", img)
         img_base64 = base64.b64encode(img_encoded).decode("utf-8")
 
