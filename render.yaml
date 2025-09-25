@@ -5,11 +5,11 @@ services:
     buildCommand: "pip install -r requirements.txt"
     startCommand: "gunicorn app:app"
     envVars:
-      - key: SUPABASE_URL
+      - key: https://ipgfsxnaohvsnnoxhdbv.supabase.co
         sync: false
-      - key: SUPABASE_API_KEY
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZ2ZzeG5hb2h2c25ub3hoZGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3Mzc4OTQsImV4cCI6MjA3NDMxMzg5NH0.Ia_CdNAiu5HKPsjc_J5e5Xu1Zoh-bwrBtnpvHP9-D_w
         sync: false
-      - key: ROBOFLOW_API_KEY
+      - key: jBVSfkwNV6KBQ29SYJ5H
         sync: false
-      - key: ROBOFLOW_MODEL_ID
+      - key: pineapple-xooc7-5fxts/1
         sync: false
