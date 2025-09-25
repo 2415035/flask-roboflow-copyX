@@ -18,9 +18,9 @@ app = Flask(__name__)
 # === Configuración Roboflow ===
 CLIENT = InferenceHTTPClient(
     api_url="https://serverless.roboflow.com",
-    api_key="jBVSfkwNV6KBQ29SYJ5H"   # <<<<< tu API KEY de Roboflow
+    api_key="jBVSfkwNV6KBQ29SYJ5H"  # 🔒 Usa tu API KEY real
 )
-MODEL_ID = "pineapple-xooc7-5fxts/1"  # <<<<< tu modelo Roboflow
+MODEL_ID = "pineapple-xooc7-5fxts/1"
 
 # === Configuración Supabase ===
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -39,7 +39,6 @@ def dashboard():
 
     if data:
         df = pd.DataFrame(data)
-        # Asegúrate de que exista la columna 'clasevalidada' para graficar
         if 'clasevalidada' in df.columns:
             fig_bar = px.bar(df, x="clasevalidada", title="Conteo de clases validadas")
             fig_pie = px.pie(df, names="clasevalidada", title="Distribución de clases")
@@ -56,75 +55,68 @@ def dashboard():
 @app.route('/process', methods=['POST'])
 def process():
     try:
-        image = request.files['imageFile']
-        if not image:
+        image_file = request.files.get('imageFile')
+        if not image_file:
             return jsonify({"error": "No se recibió la imagen"}), 400
 
-        clase_validada_form = request.form.get("clasevalidada", "Palta")
+        image_bytes = image_file.read()
+
+        # Guardar imagen temporal para procesar con Roboflow
+        with tempfile.NamedTemporaryFile(delete=True) as tmp:
+            tmp.write(image_bytes)
+            tmp.flush()
+            result = CLIENT.infer(tmp.name, model_id=MODEL_ID)
+
+        # Convertir imagen a array
+        img = Image.open(io.BytesIO(image_bytes))
+        img = np.array(img)
+
+        # Valores del formulario
+        clase_validada = request.form.get("clasevalidada", "Palta")
         try:
-            umbral_form = float(request.form.get("umbral", 0.5))
-        except (TypeError, ValueError):
-            umbral_form = 0.5
+            umbral = float(request.form.get("umbral", 0.5))
+        except:
+            umbral = 0.5
 
-    image_file = request.files["imageFile"]
-    if not image:
-        return jsonify({"error": "No se envió ninguna imagen"}), 400
-    image_bytes = image_file.read()
-    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        # Contar predicciones
+        predicciones = result["predictions"]
+        validos = sum(1 for p in predicciones if p["confidence"] >= umbral and p["class"] == clase_validada)
+        invalidos = len(predicciones) - validos
 
-    # Guardar imagen temporalmente
-    with tempfile.NamedTemporaryFile(delete=True) as tmp:
-        tmp.write(image_bytes)
-        tmp.flush()
-        result = CLIENT.infer(tmp.name, model_id=MODEL_ID)
+        # Dibujar cajas
+        for pred in predicciones:
+            x, y, w, h = int(pred["x"]), int(pred["y"]), int(pred["width"]), int(pred["height"])
+            clase = pred["class"]
+            conf = pred["confidence"]
+            x1, y1 = x - w // 2, y - h // 2
+            x2, y2 = x + w // 2, y + h // 2
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(img, f"{clase} {conf:.2f}", (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
 
-    # Convertir imagen original
-    img = Image.open(io.BytesIO(image_bytes))
-    img = np.array(img)
+        # Guardar en Supabase
+        supabase.table("predictions").insert({
+            "clasevalidada": clase_validada,
+            "fecha": str(date.today()),
+            "imagen": image_file.filename,
+            "invalidos": invalidos,
+            "validos": validos,
+            "umbral": umbral,
+            "predicciones": predicciones
+        }).execute()
 
-    # Obtener clase válida y umbral desde el formulario
-    clase_validada_form = request.form.get("clasevalidada", "Palta")
-    
-    try:
-        umbral_form = float(request.form.get("umbral", 0.5))
-    except (TypeError, ValueError):
-        umbral_form = 0.5
-    predicciones = result["predictions"]
-    validos = sum(1 for p in predicciones if p["confidence"] >= umbral)
-    invalidos = len(predicciones) - validos
-    clase_validada = clase_validada_form
+        # Imagen a base64
+        _, img_encoded = cv2.imencode(".png", img)
+        img_base64 = base64.b64encode(img_encoded).decode("utf-8")
 
-    # Dibujar resultados
-    for pred in predicciones:
-        x, y, w, h = int(pred["x"]), int(pred["y"]), int(pred["width"]), int(pred["height"])
-        clase = pred["class"]
-        conf = pred["confidence"]
-        x1, y1 = x - w // 2, y - h // 2
-        x2, y2 = x + w // 2, y + h // 2
-        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(img, f"{clase} {conf:.2f}", (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+        return jsonify({
+            "image": img_base64,
+            "json": result
+        })
 
-    # Insertar en Supabase
-    supabase.table("predictions").insert({
-        "clasevalidada": clase_validada,
-        "fecha": str(date.today()),
-        "imagen": image_file.filename,
-        "invalidos": invalidos,
-        "validos": validos,
-        "umbral": umbral,
-        "predicciones": predicciones
-    }).execute()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    # Convertir imagen a base64
-    _, img_encoded = cv2.imencode(".png", img)
-    img_base64 = base64.b64encode(img_encoded).decode("utf-8")
-
-    return jsonify({
-        "image": img_base64,
-        "json": result
-    })
-
-# === Ejecutar local o en Render ===
+# === Run local o Render ===
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
