@@ -91,5 +91,35 @@ def process():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/graficos")
+def graficos():
+    try:
+        response = supabase.table("predictions").select("*").execute()
+        data = response.data or []
+
+        from collections import defaultdict
+        import plotly.express as px
+        import pandas as pd
+
+        conteo = defaultdict(int)
+        for fila in data:
+            for pred in fila.get("predicciones", []):
+                clase = pred.get("class")
+                if clase:
+                    conteo[clase] += 1
+
+        df = pd.DataFrame(list(conteo.items()), columns=["clase", "cantidad"])
+
+        fig_bar = px.bar(df, x="clase", y="cantidad", title="Conteo de predicciones")
+        fig_pie = px.pie(df, names="clase", values="cantidad", title="Distribución")
+
+        return jsonify({
+            "bar": fig_bar.to_html(full_html=False),
+            "pie": fig_pie.to_html(full_html=False)
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
