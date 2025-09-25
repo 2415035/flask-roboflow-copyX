@@ -1,9 +1,9 @@
-numpy<2.0
-opencv-python-headless==4.9.0.80
-supabase
 flask
 gunicorn
-plotly
+opencv-python-headless
+pillow
 pandas
-requests
+plotly
+supabase
+inference-sdk
 
