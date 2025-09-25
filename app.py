@@ -98,8 +98,6 @@ def graficos():
         data = response.data or []
 
         from collections import defaultdict
-        import plotly.express as px
-        import pandas as pd
 
         conteo = defaultdict(int)
         for fila in data:
@@ -108,14 +106,12 @@ def graficos():
                 if clase:
                     conteo[clase] += 1
 
-        df = pd.DataFrame(list(conteo.items()), columns=["clase", "cantidad"])
-
-        fig_bar = px.bar(df, x="clase", y="cantidad", title="Conteo de predicciones")
-        fig_pie = px.pie(df, names="clase", values="cantidad", title="Distribución")
+        labels = list(conteo.keys())
+        valores = list(conteo.values())
 
         return jsonify({
-            "bar": fig_bar.to_html(full_html=False),
-            "pie": fig_pie.to_html(full_html=False)
+            "labels": labels,
+            "values": valores
         })
 
     except Exception as e:
