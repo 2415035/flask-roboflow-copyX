@@ -198,7 +198,13 @@
       $('#card-upload-image').block({ message: "Cargando..." });
 
       const formData = new FormData();
-      formData.append("imageFile", document.getElementById("imageFile").files[0]);
+      const file = document.getElementById("imageFile").files[0];
+      const label = document.getElementById("validClass").value;
+      const confidence = parseFloat(document.getElementById("threshold").value);
+    
+      formData.append("imageFile", file);
+      formData.append("clasevalidada", label);       // Enviamos clase válida
+      formData.append("umbral", confidence);         // Enviamos umbral
 
       $.ajax({
         url: "/process",
@@ -210,7 +216,7 @@
           $('#card-upload-image').unblock();
           $('#lastMsg').text('Análisis completado.');
           showToast('✅ Imagen procesada y predicción guardada en Supabase', true);
-
+    
           if(resp.image){
             $('#imageProcessed').attr('src', 'data:image/png;base64,'+resp.image).show();
             $('#btnDownload').attr('href', 'data:image/png;base64,'+resp.image);
