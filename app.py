@@ -10,6 +10,7 @@ from flask import Flask, render_template, request, jsonify
 from inference_sdk import InferenceHTTPClient
 import plotly.express as px
 from supabase import create_client, Client
+from datetime import date
 
 # === Configuración Flask ===
 app = Flask(__name__)
@@ -17,15 +18,14 @@ app = Flask(__name__)
 # === Configuración Roboflow ===
 CLIENT = InferenceHTTPClient(
     api_url="https://serverless.roboflow.com",
-    api_key="jBVSfkwNV6KBQ29SYJ5H"   # <<<<< pon tu API KEY de Roboflow
+    api_key="jBVSfkwNV6KBQ29SYJ5H"   # <<<<< tu API KEY de Roboflow
 )
-MODEL_ID = "pineapple-xooc7-5fxts/1"  # <<<<< reemplaza con el modelo que uses
+MODEL_ID = "pineapple-xooc7-5fxts/1"  # <<<<< tu modelo Roboflow
 
 # === Configuración Supabase ===
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_API_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 # === Rutas principales ===
 @app.route("/")
@@ -34,25 +34,23 @@ def home():
 
 @app.route("/dashboard")
 def dashboard():
-    # Obtener datos desde Supabase
     response = supabase.table("predictions").select("*").execute()
     data = response.data if response.data else []
 
     if data:
         df = pd.DataFrame(data)
-
-        # Gráfico de barras
-        fig_bar = px.bar(df, x="label", title="Conteo de predicciones")
-        graph_bar = fig_bar.to_html(full_html=False)
-
-        # Gráfico de torta
-        fig_pie = px.pie(df, names="label", title="Distribución de predicciones")
-        graph_pie = fig_pie.to_html(full_html=False)
+        # Asegúrate de que exista la columna 'clasevalidada' para graficar
+        if 'clasevalidada' in df.columns:
+            fig_bar = px.bar(df, x="clasevalidada", title="Conteo de clases validadas")
+            fig_pie = px.pie(df, names="clasevalidada", title="Distribución de clases")
+            graph_bar = fig_bar.to_html(full_html=False)
+            graph_pie = fig_pie.to_html(full_html=False)
+        else:
+            graph_bar, graph_pie = None, None
     else:
         graph_bar, graph_pie = None, None
 
     return render_template("dashboard.html", graph_bar=graph_bar, graph_pie=graph_pie, data=data)
-
 
 # === Procesar imagen con Roboflow + guardar en Supabase ===
 @app.route("/process", methods=["POST"])
@@ -63,35 +61,44 @@ def process():
     image_file = request.files["imageFile"]
     image_bytes = image_file.read()
 
-    # Guardar temporalmente
+    # Guardar imagen temporalmente
     with tempfile.NamedTemporaryFile(delete=True) as tmp:
         tmp.write(image_bytes)
         tmp.flush()
         result = CLIENT.infer(tmp.name, model_id=MODEL_ID)
 
-    # Cargar imagen original
+    # Convertir imagen original
     img = Image.open(io.BytesIO(image_bytes))
     img = np.array(img)
 
-    # Dibujar predicciones en la imagen
-    for pred in result["predictions"]:
+    # Parámetros de análisis
+    umbral = 0.5
+    predicciones = result["predictions"]
+    validos = sum(1 for p in predicciones if p["confidence"] >= umbral)
+    invalidos = len(predicciones) - validos
+    clase_validada = predicciones[0]["class"] if predicciones else "ninguna"
+
+    # Dibujar resultados
+    for pred in predicciones:
         x, y, w, h = int(pred["x"]), int(pred["y"]), int(pred["width"]), int(pred["height"])
         clase = pred["class"]
         conf = pred["confidence"]
-
         x1, y1 = x - w // 2, y - h // 2
         x2, y2 = x + w // 2, y + h // 2
-
         cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.putText(img, f"{clase} {conf:.2f}", (x1, y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
 
-        # === Guardar cada predicción en Supabase ===
-        supabase.table("predictions").insert({
-            "filename": image_file.filename,
-            "label": clase,
-            "confidence": conf
-        }).execute()
+    # Insertar en Supabase
+    supabase.table("predictions").insert({
+        "clasevalidada": clase_validada,
+        "fecha": str(date.today()),
+        "imagen": image_file.filename,
+        "invalidos": invalidos,
+        "validos": validos,
+        "umbral": umbral,
+        "predicciones": predicciones
+    }).execute()
 
     # Convertir imagen a base64
     _, img_encoded = cv2.imencode(".png", img)
@@ -102,6 +109,6 @@ def process():
         "json": result
     })
 
-
+# === Ejecutar local o en Render ===
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
