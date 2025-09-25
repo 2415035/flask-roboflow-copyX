@@ -66,18 +66,38 @@
       try {
         const res = await fetch("/graficos");
         const data = await res.json();
-        document.getElementById("barGraph").innerHTML = data.bar;
-        document.getElementById("pieGraph").innerHTML = data.pie;
+  
+        const labels = data.labels;
+        const values = data.values;
+  
+        const barData = [{
+          x: labels,
+          y: values,
+          type: 'bar',
+          marker: { color: 'cornflowerblue' }
+        }];
+  
+        const pieData = [{
+          labels: labels,
+          values: values,
+          type: 'pie',
+          textinfo: 'label+percent',
+          insidetextorientation: 'radial'
+        }];
+  
+        const barLayout = { title: "Conteo de predicciones" };
+        const pieLayout = { title: "Distribución" };
+  
+        Plotly.react("barGraph", barData, barLayout);
+        Plotly.react("pieGraph", pieData, pieLayout);
+  
       } catch (e) {
         console.error("Error cargando gráficos:", e);
       }
     }
-
-    // Cargar al inicio
-    cargarGraficos();
   
-    // Actualizar cada 10 segundos
-    setInterval(cargarGraficos, 10000);
+    cargarGraficos(); // al cargar la página
+    setInterval(cargarGraficos, 10000); // cada 10 segundos
   </script>
   
 </body>
