@@ -22,8 +22,8 @@ CLIENT = InferenceHTTPClient(
 MODEL_ID = "pineapple-xooc7-5fxts/1"  # <<<<< reemplaza con el modelo que uses
 
 # === Configuración Supabase ===
-SUPABASE_URL = "https://ipgfsxnaohvsnnoxhdbv.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."  # tu key completa
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_API_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
