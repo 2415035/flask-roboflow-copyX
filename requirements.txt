@@ -5,5 +5,5 @@ pillow
 pandas
 plotly
 supabase
-inference-sdk
+inference
 
