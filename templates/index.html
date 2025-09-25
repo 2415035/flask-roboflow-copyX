@@ -59,55 +59,63 @@
     <h2 class="text-center">📊 Estadísticas de predicciones</h2>
     <div class="row">
       <div class="col-md-6">
-        <div id="bar-chart-container" style="height: 400px;">
-          {{ graph_bar|safe }}
-        </div>
+        <div id="barGraph">Cargando gráfico de barras...</div>
       </div>
       <div class="col-md-6">
-        <div id="pie-chart-container" style="height: 400px;">
-          {{ graph_pie|safe }}
-        </div>
+        <div id="pieGraph">Cargando gráfico de pastel...</div>
       </div>
   </div>
   
 
-  <script>
-    async function cargarGraficos() {
-      try {
-        const res = await fetch("/graficos");
-        const data = await res.json();
-  
-        const labels = data.labels;
-        const values = data.values;
-  
-        const barData = [{
-          x: labels,
-          y: values,
-          type: 'bar',
-          marker: { color: 'cornflowerblue' }
-        }];
-  
-        const pieData = [{
-          labels: labels,
-          values: values,
-          type: 'pie',
-          textinfo: 'label+percent',
-          insidetextorientation: 'radial'
-        }];
-  
-        const barLayout = { title: "Conteo de predicciones" };
-        const pieLayout = { title: "Distribución" };
-  
-        Plotly.react("barGraph", barData, barLayout);
-        Plotly.react("pieGraph", pieData, pieLayout);
-  
-      } catch (e) {
-        console.error("Error cargando gráficos:", e);
+    <script>
+      async function cargarGraficos() {
+        try {
+          const res = await fetch('/datos');  // Endpoint que entrega los datos en JSON
+          const datos = await res.json();
+    
+          // Separar por clases
+          const conteo = {};
+          datos.forEach(item => {
+            item.predicciones.forEach(pred => {
+              const clase = pred.class;
+              conteo[clase] = (conteo[clase] || 0) + 1;
+            });
+          });
+    
+          const clases = Object.keys(conteo);
+          const cantidades = Object.values(conteo);
+    
+          // Gráfico de barras
+          const bar = {
+            x: clases,
+            y: cantidades,
+            type: 'bar',
+            marker: { color: 'blue' }
+          };
+          Plotly.newPlot('barGraph', [bar], {
+            title: 'Conteo de predicciones',
+            yaxis: { title: 'Cantidad' },
+            xaxis: { title: 'Clase' }
+          });
+    
+          // Gráfico de pastel
+          const pie = {
+            labels: clases,
+            values: cantidades,
+            type: 'pie'
+          };
+          Plotly.newPlot('pieGraph', [pie], {
+            title: 'Distribución de clases'
+          });
+    
+        } catch (error) {
+          console.error("Error cargando gráficos:", error);
+        }
       }
-    }
-  
-    cargarGraficos(); // al cargar la página
-    setInterval(cargarGraficos, 10000); // cada 10 segundos
+    
+      // Actualizar cada 5 segundos
+      cargarGraficos();
+      setInterval(cargarGraficos, 5000);
   </script>
   
 </body>
