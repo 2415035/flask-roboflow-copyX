@@ -25,11 +25,13 @@ def index():
         response = supabase.table("predictions").select("*").execute()
         data = response.data or []
 
-        conteo = {"ripen": 0, "unripe": 0}
+        from collections import defaultdict
+
+        conteo = defaultdict(int)
         for fila in data:
             for pred in fila.get("predicciones", []):
                 clase = pred.get("class")
-                if clase in conteo:
+                if clase:
                     conteo[clase] += 1
 
         import plotly.express as px
