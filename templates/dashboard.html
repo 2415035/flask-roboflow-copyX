@@ -253,7 +253,7 @@
       const confidence = parseFloat(document.getElementById("threshold").value);
 
       $.ajax({
-        url: "/predict",
+        url: "/process",
         type: "POST",
         contentType: "application/json",
         data: JSON.stringify({
