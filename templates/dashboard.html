@@ -6,7 +6,7 @@
   <title>Panel de verificación</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="icon" href="data:;base64,iVBORw0KGgo="><!-- evita 404 -->
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
 
   <!-- CSS propio -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/json.css') }}" />
@@ -28,7 +28,7 @@
     <h1 class="mb-4 text-center">Panel de verificación</h1>
 
     <div class="row g-3">
-      <!-- Columna izquierda -->
+      <!-- Col: Cargar -->
       <div class="col-12 col-lg-3">
         <div class="card sticky" id="card-upload-image">
           <div class="card-header">Cargar imagen</div>
@@ -87,10 +87,76 @@
         </div>
       </div>
 
-      <!-- Columna central -->
+      <!-- Col: Análisis -->
       <div class="col-12 col-lg-5">
         <div class="card h-100">
           <div class="card-header d-flex align-items-center justify-content-between">
+            <span>Análisis</span>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" id="autoCount" checked>
+              <label class="form-check-label" for="autoCount">Contar automático</label>
+            </div>
+          </div>
+          <div class="card-body text-center">
+            <div class="d-flex flex-column gap-3 align-items-center">
+              <div class="spinner-border" role="status" id="spinner-analisis" style="display:none;">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+
+              <div id="card-result-analisis" style="display:none;">
+                <img id="imageProcessed" src="#" alt="Procesada" class="img-fluid rounded" style="display:none;">
+                <div class="pt-3 d-flex gap-2 justify-content-center">
+                  <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#json-data-modal">Ver detalles</button>
+                  <a id="btnDownload" class="btn btn-outline-primary" download="procesado.png">Descargar</a>
+                </div>
+              </div>
+
+              <div class="text-start w-100">
+                <div class="row g-2">
+                  <div class="col-6">
+                    <div class="alert alert-success py-2 m-0">
+                      <strong id="qtyValidText">0</strong> válidos
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="alert alert-danger py-2 m-0">
+                      <strong id="qtyInvalidText">0</strong> inválidos
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-start w-100">
+                <small class="text-muted">
+                  *Válido = clase seleccionada + confianza ≥ umbral.
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Col: Acciones -->
+      <div class="col-12 col-lg-4">
+        <div class="card h-100">
+          <div class="card-header">Acciones</div>
+          <div class="card-body">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="alertSwitch">
+              <label class="form-check-label" for="alertSwitch">Alertar si inválidos &gt; 0</label>
+            </div>
+            <hr>
+            <div id="lastMsg" class="small text-muted">Listo para procesar.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📊 Gráficos -->
+    <div class="row g-3 mt-4">
+      <div class="col-12 col-lg-6">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
             <span>Gráfico de barras</span>
             <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">🔄</button>
           </div>
@@ -104,10 +170,9 @@
         </div>
       </div>
 
-      <!-- Columna derecha -->
-      <div class="col-12 col-lg-4">
+      <div class="col-12 col-lg-6">
         <div class="card h-100">
-          <div class="card-header d-flex align-items-center justify-content-between">
+          <div class="card-header d-flex justify-content-between align-items-center">
             <span>Gráfico de torta</span>
             <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">🔄</button>
           </div>
@@ -119,37 +184,6 @@
             {% endif %}
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Tabla de registros -->
-    <div class="card mt-4">
-      <div class="card-header">Historial de predicciones</div>
-      <div class="card-body table-responsive">
-        {% if data %}
-        <table class="table table-striped">
-          <thead>
-            <tr>
-              <th>Archivo</th>
-              <th>Etiqueta</th>
-              <th>Confianza</th>
-              <th>Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in data %}
-            <tr>
-              <td>{{ row.filename }}</td>
-              <td>{{ row.label }}</td>
-              <td>{{ row.confidence }}</td>
-              <td>{{ row.created_at }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        {% else %}
-          <p class="text-muted">No se han registrado predicciones todavía.</p>
-        {% endif %}
       </div>
     </div>
   </div>
@@ -188,7 +222,6 @@
   <script src="https://malsup.github.io/jquery.blockUI.js"></script>
 
   <script>
-    // Mostrar toasts
     function showToast(msg, ok=true){
       const toastEl = document.getElementById('toast');
       const body = document.getElementById('toastBody');
@@ -198,7 +231,6 @@
       new bootstrap.Toast(toastEl, { delay: 2200 }).show();
     }
 
-    // Previsualizar imagen
     $('#imageFile').change(function () {
       const file = this.files[0];
       if (file) {
@@ -212,10 +244,8 @@
       }
     });
 
-    // Procesar predicción y guardar en Supabase vía Flask
     $('#uploadForm').submit(function (event) {
       event.preventDefault();
-
       $('#card-upload-image').block({ message: "Cargando..." });
 
       const file = document.getElementById("imageFile").files[0];
@@ -246,7 +276,6 @@
       });
     });
 
-    // Copiar JSON de la modal
     $('#btnCopyJson').on('click', () => {
       const text = document.getElementById('processedText').innerText;
       navigator.clipboard.writeText(text).then(() => showToast('JSON copiado 📋', true));
