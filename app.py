@@ -1,11 +1,14 @@
 import io, os, base64, tempfile, cv2, numpy as np
 from PIL import Image
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 from inference_sdk import InferenceHTTPClient
 from supabase import create_client, Client
 from datetime import datetime
 
+
 app = Flask(__name__)
+CORS(app)
 
 # Roboflow
 CLIENT = InferenceHTTPClient(
