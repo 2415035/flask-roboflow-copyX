@@ -79,6 +79,17 @@ def process_auto():
             fruit_result = CLIENT.infer(tmp.name, model_id=GENERAL_MODEL)
 
         fruit_class = fruit_result["predictions"][0]["class"].lower()
+        if fruit_class in ["orange"]:
+            fruit_class = "naranja"
+        elif fruit_class in ["pineapple"]:
+            fruit_class = "pina"
+        elif fruit_class in ["strawberry"]:
+            fruit_class = "fresa"
+        elif fruit_class in ["watermelon"]:
+            fruit_class = "sandia"
+        elif fruit_class in ["mango"]:
+            fruit_class = "mango"
+            
         model_id = FRUIT_MODELS.get(fruit_class, "pineapple-detector/1")
 
         print(f"➡️ Detectado: {fruit_class} | Usando modelo: {model_id}")
@@ -90,12 +101,31 @@ def process_auto():
             quality_result = CLIENT.infer(tmp2.name, model_id=model_id)
 
         # Guardar en Supabase
+        # === Normalizar predicciones antes de guardar ===
+        preds = quality_result.get("predictions", [])
+        normalized_preds = []
+        
+        for p in preds:
+            clase = p.get("class", "").lower().strip()
+        
+            # Unificar nombres variantes
+            if clase in ["unripen", "unripe", "green", "immature"]:
+                clase = "unripe"
+            elif clase in ["ripe", "ripe-orange", "ripen"]:
+                clase = "ripe"
+            elif clase in ["overripe", "too-ripe", "rotten"]:
+                clase = "overripe"
+        
+            p["class"] = clase
+            normalized_preds.append(p)
+        
+        # Guardar en Supabase ya normalizado
         supabase.table("predictions").insert({
             "fecha": datetime.now().isoformat(),
             "imagen": image_file.filename,
             "fruta": fruit_class,
             "modelo": model_id,
-            "predicciones": quality_result.get("predictions", [])
+            "predicciones": normalized_preds
         }).execute()
 
         # Devolver imagen procesada y resultado
