@@ -78,6 +78,19 @@ def process():
             cv2.putText(img, f"{label} {conf:.2f}", (x1, y1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
 
+        # Obtener nombre de fruta o modelo dinámico
+        fruta = MODEL_ID.split("/")[0] if MODEL_ID else "desconocido"
+        
+        # Guardar en Supabase con fruta y modelo
+        supabase.table("predictions").insert({
+            "fecha": datetime.now().isoformat(),
+            "imagen": image_file.filename,
+            "fruta": fruta,
+            "modelo": MODEL_ID,
+            "predicciones": result.get("predictions", [])
+        }).execute()
+
+        
         # Guardar en Supabase
         supabase.table("predictions").insert({
             "fecha": datetime.now().isoformat(),
@@ -101,11 +114,11 @@ def graficos():
         data = response.data or []
 
         from collections import defaultdict
-
         conteo = defaultdict(int)
+
         for fila in data:
             for pred in fila.get("predicciones", []):
-                clase = pred.get("class")
+                clase = pred.get("class", "").lower().strip()
                 if clase:
                     conteo[clase] += 1
 
@@ -116,9 +129,9 @@ def graficos():
             "labels": labels,
             "values": valores
         })
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/datos")
 def datos():
