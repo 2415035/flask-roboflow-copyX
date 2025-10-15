@@ -79,18 +79,18 @@ def process_auto():
             fruit_result = CLIENT.infer(tmp.name, model_id=GENERAL_MODEL)
 
         fruit_class = fruit_result["predictions"][0]["class"].lower().strip()
-		if fruit_class in ["orange"]:
-			fruit_class = "orange"
-		elif fruit_class in ["pineapple"]:
-			fruit_class = "pineapple"
-		elif fruit_class in ["strawberry"]:
-			fruit_class = "strawberry"
-		elif fruit_class in ["watermelon"]:
-			fruit_class = "watermelon"
-		elif fruit_class in ["mango"]:
-			fruit_class = "mango"
-		elif fruit_class in ["banana"]:
-			fruit_class = "banana"
+        if fruit_class in ["orange"]:
+            fruit_class = "orange"
+        elif fruit_class in ["pineapple"]:
+            fruit_class = "pineapple"
+        elif fruit_class in ["strawberry"]:
+            fruit_class = "strawberry"
+        elif fruit_class in ["watermelon"]:
+            fruit_class = "watermelon"
+        elif fruit_class in ["mango"]:
+            fruit_class = "mango"
+        elif fruit_class in ["banana"]:
+            fruit_class = "banana"
 
         model_id = FRUIT_MODELS.get(fruit_class, FRUIT_MODELS["pineapple"])
 
@@ -112,11 +112,11 @@ def process_auto():
         
             # Unificar nombres variantes
             if clase in ["unripen", "unripe", "green", "immature", "underipe"]:
-				clase = "unripe"
-		    elif clase in ["ripe", "ripe-orange", "ripen", "ready"]:
-				clase = "ripe"
-			elif clase in ["overripe", "too-ripe", "rotten", "bad"]:
-				clase = "overripe"
+                clase = "unripe"
+            elif clase in ["ripe", "ripe-orange", "ripen", "ready"]:
+                clase = "ripe"
+            elif clase in ["overripe", "too-ripe", "rotten", "bad"]:
+                clase = "overripe"
         
             p["class"] = clase
             normalized_preds.append(p)
