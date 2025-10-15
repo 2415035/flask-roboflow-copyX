@@ -15,6 +15,12 @@ CLIENT = InferenceHTTPClient(
     api_url="https://serverless.roboflow.com",
     api_key=os.environ.get("ROBOFLOW_API_KEY")
 )
+
+FRUIT_MODELS = {
+    "piña": "pineapple-detector/1",
+    "palta": "avocado-quality/2",
+    "mandarina": "tangerine-quality/1"
+}
 MODEL_ID = os.environ.get("ROBOFLOW_MODEL_ID", "pineapple-detector/1")
 
 # Supabase
@@ -91,13 +97,6 @@ def process():
         }).execute()
 
         
-        # Guardar en Supabase
-        supabase.table("predictions").insert({
-            "fecha": datetime.now().isoformat(),
-            "imagen": image_file.filename,
-            "predicciones": result.get("predictions", [])
-        }).execute()
-
         _, img_encoded = cv2.imencode(".png", img)
         img_base64 = base64.b64encode(img_encoded).decode("utf-8")
 
@@ -119,8 +118,13 @@ def graficos():
         for fila in data:
             for pred in fila.get("predicciones", []):
                 clase = pred.get("class", "").lower().strip()
-                if clase:
-                    conteo[clase] += 1
+                if clase in ["unripen", "unripened"]:
+                    clase = "unripe"
+                elif clase in ["ripen", "ripe"]:
+                    clase = "ripe"
+                elif clase in ["overripen", "overripe"]:
+                    clase = "overripe"
+                conteo[clase] += 1
 
         labels = list(conteo.keys())
         valores = list(conteo.values())
@@ -129,6 +133,34 @@ def graficos():
             "labels": labels,
             "values": valores
         })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/process/<fruta>", methods=["POST"])
+def process_fruit(fruta):
+    try:
+        model_id = FRUIT_MODELS.get(fruta, MODEL_ID)
+        image_file = request.files.get("imageFile")
+        if not image_file:
+            return jsonify({"error": "No se recibió la imagen"}), 400
+
+        image_bytes = image_file.read()
+        with tempfile.NamedTemporaryFile(delete=True) as tmp:
+            tmp.write(image_bytes)
+            tmp.flush()
+            result = CLIENT.infer(tmp.name, model_id=model_id)
+
+        supabase.table("predictions").insert({
+            "fecha": datetime.now().isoformat(),
+            "imagen": image_file.filename,
+            "fruta": fruta,
+            "modelo": model_id,
+            "predicciones": result.get("predictions", [])
+        }).execute()
+
+        _, img_encoded = cv2.imencode(".png", cv2.cvtColor(np.array(Image.open(io.BytesIO(image_bytes))), cv2.COLOR_RGB2BGR))
+        img_base64 = base64.b64encode(img_encoded).decode("utf-8")
+        return jsonify({"image": img_base64, "json": result})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
