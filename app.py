@@ -17,11 +17,17 @@ CLIENT = InferenceHTTPClient(
 )
 
 FRUIT_MODELS = {
-    "piña": "pineapple-detector/1",
-    "palta": "avocado-quality/2",
-    "mandarina": "tangerine-quality/1"
+    "mango": "mango-bzoww/1",
+    "strawberry": "strawberry-p7nq9/2",
+    "pineapple": "pineapple-xooc7/1",
+    "banana": "banana-gh2yn/1",
+    "orange": "orange-jsuej/1",
+    "watermelon": "watermelon-xztju/5"
 }
+
 MODEL_ID = os.environ.get("ROBOFLOW_MODEL_ID", "pineapple-detector/1")
+
+GENERAL_MODEL = "fruits-and-vegetables-yz9mm/1"  # 👈 modelo general de frutas
 
 # Supabase
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -58,52 +64,53 @@ def index():
         return f"<h2>Error cargando gráficos: {str(e)}</h2>"
 
 @app.route("/process", methods=["POST"])
-def process():
+def process_auto():
     try:
         image_file = request.files.get("imageFile")
         if not image_file:
             return jsonify({"error": "No se recibió la imagen"}), 400
 
         image_bytes = image_file.read()
+
+        # === 1️⃣ PRIMERA ETAPA: detectar tipo de fruta ===
         with tempfile.NamedTemporaryFile(delete=True) as tmp:
             tmp.write(image_bytes)
             tmp.flush()
-            result = CLIENT.infer(tmp.name, model_id=MODEL_ID)
+            fruit_result = CLIENT.infer(tmp.name, model_id=GENERAL_MODEL)
 
-        # Convertir a numpy para mostrar
-        img = Image.open(io.BytesIO(image_bytes))
-        img = np.array(img)
+        fruit_class = fruit_result["predictions"][0]["class"].lower()
+        model_id = FRUIT_MODELS.get(fruit_class, "pineapple-detector/1")
 
-        for pred in result.get("predictions", []):
-            x, y, w, h = int(pred["x"]), int(pred["y"]), int(pred["width"]), int(pred["height"])
-            label = pred["class"]
-            conf = pred["confidence"]
-            x1, y1 = x - w // 2, y - h // 2
-            x2, y2 = x + w // 2, y + h // 2
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0,255,0), 2)
-            cv2.putText(img, f"{label} {conf:.2f}", (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+        print(f"➡️ Detectado: {fruit_class} | Usando modelo: {model_id}")
 
-        # Obtener nombre de fruta o modelo dinámico
-        fruta = MODEL_ID.split("/")[0] if MODEL_ID else "desconocido"
-        
-        # Guardar en Supabase con fruta y modelo
+        # === 2️⃣ SEGUNDA ETAPA: análisis de calidad con el modelo correcto ===
+        with tempfile.NamedTemporaryFile(delete=True) as tmp2:
+            tmp2.write(image_bytes)
+            tmp2.flush()
+            quality_result = CLIENT.infer(tmp2.name, model_id=model_id)
+
+        # Guardar en Supabase
         supabase.table("predictions").insert({
             "fecha": datetime.now().isoformat(),
             "imagen": image_file.filename,
-            "fruta": fruta,
-            "modelo": MODEL_ID,
-            "predicciones": result.get("predictions", [])
+            "fruta": fruit_class,
+            "modelo": model_id,
+            "predicciones": quality_result.get("predictions", [])
         }).execute()
 
-        
+        # Devolver imagen procesada y resultado
+        img = Image.open(io.BytesIO(image_bytes))
+        img = np.array(img)
         _, img_encoded = cv2.imencode(".png", img)
         img_base64 = base64.b64encode(img_encoded).decode("utf-8")
 
-        return jsonify({ "image": img_base64, "json": result })
+        return jsonify({
+            "image": img_base64,
+            "fruta_detectada": fruit_class,
+            "modelo_usado": model_id,
+            "json": quality_result
+        })
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/graficos")
