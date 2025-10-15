@@ -79,8 +79,7 @@ def process_auto():
             fruit_result = CLIENT.infer(tmp.name, model_id=GENERAL_MODEL)
 
         fruit_class = fruit_result["predictions"][0]["class"].lower().strip()
-        
-        if fruit_class in ["orange"]:
+		if fruit_class in ["orange"]:
 			fruit_class = "orange"
 		elif fruit_class in ["pineapple"]:
 			fruit_class = "pineapple"
@@ -92,7 +91,7 @@ def process_auto():
 			fruit_class = "mango"
 		elif fruit_class in ["banana"]:
 			fruit_class = "banana"
-            
+
         model_id = FRUIT_MODELS.get(fruit_class, FRUIT_MODELS["pineapple"])
 
         print(f"➡️ Detectado: {fruit_class} | Usando modelo: {model_id}")
